@@ -40,6 +40,8 @@ pnpm build
 
 Chrome 内部页面、Chrome Web Store 等浏览器保护页面不允许扩展注入内容脚本。跨域 iframe 也受浏览器隔离规则约束。
 
+可识别的页面内容、主动跳过的内容和已验证案例请参阅[内容识别范围](docs/content-recognition.md)。
+
 远程 API 端点必须使用 HTTPS；为兼容本机模型服务，`localhost`、`127.0.0.1` 和 `[::1]` 可以使用 HTTP。
 
 ## What it includes

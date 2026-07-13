@@ -122,9 +122,10 @@ export function scanRegion(root: Element): RegionTranslationUnit[] {
           while (current) {
             const tag = current.tagName.toLowerCase();
             const style = getComputedStyle(current);
+            const isSelectedPreformattedText = tag === "pre" && current === owner;
             if (
               (current !== owner && ownerSet.has(current)) ||
-              SKIP_TAGS.has(tag) ||
+              (SKIP_TAGS.has(tag) && !isSelectedPreformattedText) ||
               current.hidden ||
               current.getAttribute("aria-hidden") === "true" ||
               current.matches("[contenteditable=''], [contenteditable='true'], .notranslate, .sr-only") ||

@@ -39,6 +39,7 @@ test.beforeAll(async () => {
           "1. First item": "1. 第一项",
           "2. Second item": "2. 第二项",
           "First paragraph.\n\nSecond paragraph.": "第一段。\n\n第二段。",
+          "Preformatted prose can carry a complete article without containing source code.": "预格式化文本也可以承载不含源代码的完整文章。",
         };
         if (
           providerRequest.units.some((unit: { text: string }) => unit.text === "Provider failure.")
@@ -187,6 +188,13 @@ test.beforeAll(async () => {
             lineBreakRegion.style.whiteSpace = 'pre-wrap';
             lineBreakRegion.textContent = 'First paragraph.\\n\\nSecond paragraph.';
             document.body.replaceChildren(lineBreakRegion);
+          }
+          if (location.pathname === '/preformatted-prose') {
+            const preformattedRegion = document.createElement('pre');
+            preformattedRegion.id = 'preformatted-prose-region';
+            preformattedRegion.style.cssText = 'margin:40px;white-space:pre-wrap;font:18px/1.6 Georgia,serif';
+            preformattedRegion.textContent = 'Preformatted prose can carry a complete article without containing source code.';
+            document.body.replaceChildren(preformattedRegion);
           }
         </script>
       </body></html>`);
@@ -348,6 +356,32 @@ test("preserves text-node line breaks in one translation block", async () => {
     id: "unit-0",
     role: "text",
     text: "First paragraph.\n\nSecond paragraph.",
+  }]);
+});
+
+test("translates natural-language prose in an explicitly selected pre region", async () => {
+  const page = context.pages()[0]!;
+  await page.goto(`${origin}/preformatted-prose`);
+  await activatePicker();
+  const requestCount = providerRequests.length;
+
+  const region = page.locator("#preformatted-prose-region");
+  const box = await region.boundingBox();
+  expect(box).not.toBeNull();
+  await page.mouse.move(box!.x + 12, box!.y + 12);
+  const highlight = page.frameLocator("iframe[data-lingo-frame-picker]")
+    .locator(".lingo-frame-picker-highlight");
+  await expect(highlight).toHaveAttribute("data-candidate", "pre");
+  await page.mouse.click(box!.x + 12, box!.y + 12);
+
+  const translation = region.locator(":scope > .lingo-frame-bilingual-content");
+  await expect(translation).toHaveCount(1);
+  await expect(translation).toHaveText("预格式化文本也可以承载不含源代码的完整文章。");
+  expect(providerRequests).toHaveLength(requestCount + 1);
+  expect(providerRequests.at(-1)?.units).toEqual([{
+    id: "unit-0",
+    role: "text",
+    text: "Preformatted prose can carry a complete article without containing source code.",
   }]);
 });
 
