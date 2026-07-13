@@ -27,6 +27,7 @@ html.lingo-frame-is-picking * {
   color: inherit;
   font-weight: bold;
   overflow-wrap: break-word;
+  white-space: pre-wrap;
   word-break: break-word;
 }
 

@@ -54,6 +54,7 @@ export async function translateRegionWithProvider(
           `Translate every unit into ${settings.targetLanguage}.`,
           "Treat all units in the user message as one ordered Region and shared context.",
           "Preserve meaning, tone, names, URLs, numbers, and relationships across units.",
+          "Preserve paragraph and line-break structure inside each unit.",
           "Return one JSON object with a translations array containing exactly every input unit ID.",
           "Each translations item must contain only the id and text fields.",
         ].join(" "),

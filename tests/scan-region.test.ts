@@ -159,4 +159,17 @@ describe("scanRegion", () => {
     expect(units[1]?.slot.before).toBe(breaks[2]);
     expect(units[2]?.slot.before).toBeNull();
   });
+
+  it("keeps text-node line breaks inside one translation unit", () => {
+    const root = document.createElement("span");
+    root.id = "selected";
+    root.textContent = "First paragraph.\n\nSecond paragraph.";
+    document.body.appendChild(root);
+
+    const units = scanRegion(root);
+
+    expect(units).toHaveLength(1);
+    expect(units[0]?.text).toBe("First paragraph.\n\nSecond paragraph.");
+    expect(units[0]?.slot).toEqual({ parent: root, before: null });
+  });
 });

@@ -10,7 +10,7 @@
 
 当前实现从单轮 LLM Session 开始，Session messages 由一次整区翻译请求及响应构成。未来进行译文修订、追问或扩展为同一页面单 Session 时，可以保留已有 system、user 和 assistant messages，并在末尾追加新的 turn。
 
-Translation Unit 是原译文对齐、展示和状态跟踪的边界。每个 Translation Unit 都有一个紧邻原文的 Translation Slot，译文按 interleaved 策略写入对应 Slot。Region 不按 token 数或 DOM 子树拆成多个 LLM Session。
+Translation Unit 是原译文对齐、展示和状态跟踪的边界。HTML 块元素或 `<br>` 形成多个 Translation Unit 时，每个 Unit 都有一个紧邻原文的 Translation Slot，译文按 interleaved 策略写入对应 Slot。单个 Text node 内的换行保留在同一个 Unit 和译文块中，不引入文本 Range 拆分逻辑。Region 不按 token 数或 DOM 子树拆成多个 LLM Session。
 
 ## 当前消息结构
 

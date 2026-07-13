@@ -38,6 +38,7 @@ test.beforeAll(async () => {
           "First paragraph.": "第一段。",
           "1. First item": "1. 第一项",
           "2. Second item": "2. 第二项",
+          "First paragraph.\n\nSecond paragraph.": "第一段。\n\n第二段。",
         };
         if (
           providerRequest.units.some((unit: { text: string }) => unit.text === "Provider failure.")
@@ -109,6 +110,13 @@ test.beforeAll(async () => {
             structureRegion.id = 'structure-region';
             structureRegion.innerHTML = 'First paragraph.<br><br>1. First item<br>2. Second item';
             document.body.replaceChildren(structureRegion);
+          }
+          if (location.pathname === '/line-breaks') {
+            const lineBreakRegion = document.createElement('span');
+            lineBreakRegion.id = 'line-break-region';
+            lineBreakRegion.style.whiteSpace = 'pre-wrap';
+            lineBreakRegion.textContent = 'First paragraph.\\n\\nSecond paragraph.';
+            document.body.replaceChildren(lineBreakRegion);
           }
         </script>
       </body></html>`);
@@ -245,6 +253,30 @@ test("keeps hard-break content interleaved in one LLM Session message", async ()
     "1. First item",
     "2. Second item",
   ]);
+});
+
+test("preserves text-node line breaks in one translation block", async () => {
+  const page = context.pages()[0]!;
+  await page.goto(`${origin}/line-breaks`);
+  await activatePicker();
+  const requestCount = providerRequests.length;
+
+  const region = page.locator("#line-break-region");
+  const box = await region.boundingBox();
+  expect(box).not.toBeNull();
+  await page.mouse.move(box!.x + 12, box!.y + 12);
+  await page.mouse.click(box!.x + 12, box!.y + 12);
+
+  const translation = region.locator(":scope > .lingo-frame-bilingual-content");
+  await expect(translation).toHaveCount(1);
+  await expect(translation).toHaveText("第一段。\n\n第二段。");
+  await expect(translation).toHaveCSS("white-space", "pre-wrap");
+  expect(providerRequests).toHaveLength(requestCount + 1);
+  expect(providerRequests.at(-1)?.units).toEqual([{
+    id: "unit-0",
+    role: "text",
+    text: "First paragraph.\n\nSecond paragraph.",
+  }]);
 });
 
 test("Escape removes the picker and restores normal page interaction", async () => {

@@ -71,7 +71,7 @@ export function scanRegion(root: Element): RegionTranslationUnit[] {
         return NodeFilter.FILTER_REJECT;
       }
 
-      const text = (node.innerText || node.textContent || "").replace(/\s+/g, " ").trim();
+      const text = (node.innerText || node.textContent || "").trim();
       if (text.length < 2 || node.hasAttribute("data-lingo-frame-translated")) {
         return NodeFilter.FILTER_SKIP;
       }
@@ -155,7 +155,7 @@ export function scanRegion(root: Element): RegionTranslationUnit[] {
         continue;
       }
 
-      const text = textParts.join("").replace(/\s+/g, " ").trim();
+      const text = textParts.join("").trim();
       if (text.length >= 2 && current.parentNode) {
         units.push({
           id: `unit-${units.length}`,
@@ -169,7 +169,7 @@ export function scanRegion(root: Element): RegionTranslationUnit[] {
       lastTextNode = null;
     }
 
-    const text = textParts.join("").replace(/\s+/g, " ").trim();
+    const text = textParts.join("").trim();
     if (text.length >= 2) {
       let before: ChildNode | null = null;
       if (lastTextNode && uniqueCandidates.some((candidate) => owner.contains(candidate))) {

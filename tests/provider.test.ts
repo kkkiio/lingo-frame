@@ -23,7 +23,7 @@ describe("translateRegionWithProvider", () => {
     }), { status: 200, headers: { "Content-Type": "application/json" } }));
 
     const result = await translateRegionWithProvider(
-      [{ id: "unit-0", role: "paragraph", text: "Original text" }],
+      [{ id: "unit-0", role: "paragraph", text: "Original\n\ntext" }],
       settings,
       new AbortController().signal,
     );
@@ -38,8 +38,9 @@ describe("translateRegionWithProvider", () => {
     expect(body.thinking).toBeUndefined();
     expect(body.response_format).toEqual({ type: "json_object" });
     expect(body.messages[0].content).toContain("Japanese");
+    expect(body.messages[0].content).toContain("line-break structure");
     expect(JSON.parse(body.messages[1].content)).toEqual({
-      units: [{ id: "unit-0", role: "paragraph", text: "Original text" }],
+      units: [{ id: "unit-0", role: "paragraph", text: "Original\n\ntext" }],
     });
   });
 
