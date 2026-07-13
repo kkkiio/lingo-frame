@@ -21,8 +21,8 @@ const notice = ref<{ kind: "success" | "error"; text: string } | null>(null);
 const activeProvider = computed(() => settings.value.providers[settings.value.provider]);
 const providerDescription = computed(() => {
   return settings.value.provider === "deepseek"
-    ? "DeepSeek uses its OpenAI-compatible chat completions endpoint."
-    : "Use any service that implements the OpenAI chat completions API.";
+    ? "Use DeepSeek models for translation."
+    : "Use an OpenAI-compatible provider.";
 });
 
 onMounted(async () => {
@@ -150,8 +150,7 @@ async function testProvider(): Promise<void> {
             Translation instructions
           </div>
           <p class="field-description">
-            Control terminology, tone, register, audience, and writing style. LingoFrame
-            continues to manage the target language, Translation Unit mapping, and JSON response.
+            Set terminology, tone, audience, and writing style for your translations.
           </p>
 
           <div class="instruction-modes">
@@ -195,8 +194,7 @@ async function testProvider(): Promise<void> {
             />
             <div class="custom-instructions-footer">
               <small>
-                These replace only LingoFrame's translation preferences. Response constraints
-                remain active.
+                Your custom instructions replace the built-in translation preferences.
               </small>
               <button
                 class="reset"
@@ -214,7 +212,7 @@ async function testProvider(): Promise<void> {
         <div class="card-heading">
           <p class="section-label">PROVIDER</p>
           <h2>Translation provider</h2>
-          <p>Configure the model that receives selected Region text.</p>
+          <p>Choose the service and model used for translation.</p>
         </div>
 
         <label>
@@ -251,7 +249,7 @@ async function testProvider(): Promise<void> {
             </button>
           </div>
           <small>
-            The key stays in Chrome extension storage and is never exposed to page scripts.
+            Stored in this browser profile and used only to contact your chosen provider.
           </small>
         </label>
       </section>
@@ -271,7 +269,7 @@ async function testProvider(): Promise<void> {
     </form>
 
     <p class="privacy-note">
-      LingoFrame sends only the text from regions you explicitly select to the configured provider.
+      Only text you explicitly select is sent to your chosen provider.
     </p>
   </main>
 </template>
