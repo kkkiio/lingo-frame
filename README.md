@@ -53,6 +53,8 @@ Chrome 内部页面、Chrome Web Store 等浏览器保护页面不允许扩展�
 
 LingoFrame 只会把用户明确选中区域中的文字发送给已配置的翻译 provider。API Key 保存在当前 Chrome profile 的扩展本地存储中，并限制为扩展可信上下文可读；页面脚本无法直接读取它。
 
+完整的数据处理、权限用途与删除方式请参阅 [Privacy Policy](PRIVACY.md)。
+
 ## 致谢
 
 感谢 FluentRead 为 LingoFrame 的翻译流程和双语展示提供了重要的参考基础。
