@@ -1,5 +1,7 @@
 # LingoFrame
 
+[![CI](https://github.com/kkkiio/lingo-frame/actions/workflows/ci.yml/badge.svg)](https://github.com/kkkiio/lingo-frame/actions/workflows/ci.yml)
+
 ![LingoFrame 的区域选择器](docs/images/region-picker.png)
 
 LingoFrame 是一个小而清晰的 Chrome 区域翻译扩展：像 DevTools 元素选择器一样指向页面中的内容区域，点击后只翻译该 DOM 容器里的可读文字。
