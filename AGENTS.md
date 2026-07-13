@@ -46,7 +46,7 @@ lingo-frame/
 
 ## Operation Guide
 
-使用 Node.js 20.12 或更高版本。首次进入仓库后运行 `corepack pnpm install --frozen-lockfile`，WXT 会通过 `prepare` 生成 `.wxt` 类型文件。
+使用 Node.js 20.19 或更高版本。首次进入仓库后运行 `corepack pnpm install --frozen-lockfile`，WXT 会通过 `prepare` 生成 `.wxt` 类型文件。
 
 常用命令：
 

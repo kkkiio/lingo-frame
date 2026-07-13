@@ -123,13 +123,14 @@ Chrome internal pages and the Chrome Web Store cannot be used for this test beca
 
 ## Release checklist
 
-1. Merge approved store assets and documentation into `main`.
-2. Confirm the version in `package.json` is higher than every previously uploaded package.
-3. Run `pnpm check`.
-4. Run `pnpm e2e`.
-5. Load `output/chrome-mv3` as an unpacked extension and smoke-test the production build.
-6. Run `pnpm zip` and upload the generated Chrome ZIP.
+1. Confirm the version in `package.json` is higher than every previously uploaded package.
+2. Merge the release changes into `main` and wait for the `main` CI run to pass.
+3. Load `output/chrome-mv3` as an unpacked extension and smoke-test the production build.
+4. Create and push the matching `v<version>` tag from the verified `main` commit.
+5. Wait for the Release workflow to create the Draft GitHub Release.
+6. Download the Chrome ZIP and SHA-256 checksum from that Draft Release.
 7. Verify the uploaded manifest name, description, version, permissions, and optional host permissions.
 8. Upload the approved icon, screenshots, and promo tile.
 9. Complete Store listing, Privacy practices, Distribution, and Test instructions.
-10. Submit for review with deferred publishing enabled.
+10. Upload the Release workflow's Chrome ZIP and submit for review with deferred publishing enabled.
+11. Publish the GitHub Release after the Chrome Web Store submission is approved.

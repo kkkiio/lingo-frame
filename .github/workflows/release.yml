@@ -1,0 +1,88 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Build draft release
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out tagged source
+        uses: actions/checkout@v6
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: "20.19"
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Verify tag and package versions
+        id: release
+        run: |
+          version="$(node -p "require('./package.json').version")"
+          expected_tag="v${version}"
+          if [[ "${GITHUB_REF_NAME}" != "${expected_tag}" ]]; then
+            echo "Tag ${GITHUB_REF_NAME} does not match package version ${version}" >&2
+            exit 1
+          fi
+          echo "archive=output/lingo-frame-${version}-chrome.zip" >> "${GITHUB_OUTPUT}"
+          echo "checksum=output/lingo-frame-${version}-chrome.zip.sha256" >> "${GITHUB_OUTPUT}"
+
+      - name: Run typecheck, unit tests, and production build
+        run: pnpm check
+
+      - name: Install Chromium
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Run extension end-to-end tests
+        run: pnpm e2e
+
+      - name: Build Chrome package
+        run: pnpm zip
+
+      - name: Generate package checksum
+        run: |
+          archive="${{ steps.release.outputs.archive }}"
+          checksum="${{ steps.release.outputs.checksum }}"
+          cd "$(dirname "${archive}")"
+          sha256sum "$(basename "${archive}")" > "$(basename "${checksum}")"
+
+      - name: Create or update draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="${GITHUB_REF_NAME}"
+          archive="${{ steps.release.outputs.archive }}"
+          checksum="${{ steps.release.outputs.checksum }}"
+          if gh release view "${tag}" >/dev/null 2>&1; then
+            gh release upload "${tag}" \
+              "${archive}#Chrome extension package" \
+              "${checksum}#SHA-256 checksum" \
+              --clobber
+          else
+            gh release create "${tag}" \
+              "${archive}#Chrome extension package" \
+              "${checksum}#SHA-256 checksum" \
+              --draft \
+              --generate-notes \
+              --title "LingoFrame ${tag}" \
+              --verify-tag
+          fi
