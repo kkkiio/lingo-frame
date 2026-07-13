@@ -14,7 +14,7 @@ LingoFrame 是一个小而清晰的 Chrome 区域翻译扩展：像 DevTools 元
 
 ## Installation
 
-准备 Node.js 20.12 或更高版本。克隆或下载本仓库后，可以从源码构建并加载未打包扩展：
+准备 Node.js 20.19 或更高版本。克隆或下载本仓库后，可以从源码构建并加载未打包扩展：
 
 ```bash
 cd lingo-frame
