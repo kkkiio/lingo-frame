@@ -31,9 +31,9 @@ test.beforeAll(async () => {
         const providerRequest = JSON.parse(payload.messages.at(-1).content);
         providerRequests.push(providerRequest);
         const translations: Record<string, string> = {
-          "A focused translation workflow": "专注于当前内容的翻译流程",
-          "LingoFrame translates the content region that the reader chooses.": "LingoFrame 只翻译读者所选择的内容区域。",
-          "Selecting this link must not navigate.": "选择这个链接时不应触发页面跳转。",
+          "How small questions reshape a big idea": "小问题如何重塑一个大想法",
+          "Reading becomes active when we pause at uncertainty, connect it to what we know, and let new context change the whole picture.": "当我们在不确定之处停下来，将它与已知经验连接，并让新的语境改变整体图景时，阅读就真正变得主动。",
+          "Keep the original nearby while you explore the translation.": "探索译文时，让原文始终近在眼前。",
           "Readable text inside an open shadow root.": "开放式 Shadow Root 内的可读文本。",
           "First paragraph.": "第一段。",
           "1. First item": "1. 第一项",
@@ -61,23 +61,93 @@ test.beforeAll(async () => {
     response.setHeader("Content-Type", "text/html; charset=utf-8");
     response.end(`<!doctype html>
       <html><head><style>
-        body { font: 16px/1.6 system-ui; max-width: 920px; margin: 50px auto; background:#f4f4f5; }
-        article { background:white; padding:32px; border-radius:18px; box-shadow:0 12px 35px #18181b14; }
-        aside { margin-top:24px; padding:20px; background:white; }
+        * { box-sizing: border-box; }
+        body { margin: 0; color: #18181b; background: #ffffff; font: 16px/1.55 Inter, ui-sans-serif, system-ui, sans-serif; }
+        .shell { display: grid; grid-template-columns: 80px minmax(0, 700px) 320px; width: min(1180px, 100%); min-height: 100vh; margin: 0 auto; }
+        .rail { display: flex; flex-direction: column; align-items: center; gap: 22px; padding: 18px 12px; border-right: 1px solid #e4e4e7; }
+        .rail-mark { display: grid; width: 44px; height: 44px; place-items: center; border-radius: 14px; background: linear-gradient(145deg, #4f46e5, #7c3aed); color: white; font-weight: 900; box-shadow: 0 8px 24px #4f46e533; }
+        .rail-icon { width: 22px; height: 22px; border: 2px solid #27272a; border-radius: 7px; opacity: .9; }
+        .rail-icon.round { border-radius: 50%; }
+        .rail-icon.line { height: 3px; margin-block: 2px; border: 0; border-radius: 999px; background: #27272a; }
+        .content { min-width: 0; border-right: 1px solid #e4e4e7; }
+        .topbar { display: flex; align-items: center; gap: 20px; height: 62px; padding: 0 24px; border-bottom: 1px solid #e4e4e7; background: #ffffffee; }
+        .back { font-size: 25px; }
+        .topbar strong { font-size: 20px; }
+        .author { display: flex; align-items: center; gap: 12px; padding: 20px 30px 12px; }
+        .avatar { display: grid; width: 44px; height: 44px; flex: none; place-items: center; border-radius: 50%; background: #18181b; color: white; font-weight: 800; }
+        .author-copy { display: grid; gap: 1px; }
+        .author-copy strong { font-size: 15px; }
+        .author-copy span { color: #71717a; font-size: 14px; }
+        article { padding: 6px 30px 28px; background: white; }
+        article h1 { max-width: 600px; margin: 0 0 16px; font-size: 32px; line-height: 1.16; letter-spacing: -.035em; }
+        article p { max-width: 620px; margin: 0 0 18px; color: #27272a; font-size: 18px; line-height: 1.58; }
+        article a { color: #4f46e5; font-weight: 650; text-decoration-thickness: 1px; text-underline-offset: 4px; }
+        .essay-visual { display: grid; width: 100%; height: 220px; margin: 22px 0 20px; place-items: center; overflow: hidden; border: 1px solid #eee9df; border-radius: 20px; background: #f8f5ed; }
+        .essay-visual svg { width: 92%; height: 88%; }
+        .discussion { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 18px 30px; border-top: 1px solid #e4e4e7; color: #71717a; }
+        #page-button { padding: 9px 15px; border: 1px solid #d4d4d8; border-radius: 999px; background: white; color: #27272a; font: inherit; font-weight: 700; }
+        .side { padding: 18px 22px; }
+        .search { padding: 12px 16px; border: 1px solid #e4e4e7; border-radius: 999px; background: #fafafa; color: #71717a; }
+        .side-card { margin-top: 18px; padding: 20px; border: 1px solid #e4e4e7; border-radius: 18px; }
+        .side-card h2 { margin: 0 0 14px; font-size: 19px; }
+        .recommendation { padding: 12px 0; border-top: 1px solid #f1f1f3; }
+        .recommendation:first-of-type { border-top: 0; }
+        .recommendation strong { display: block; margin-bottom: 3px; font-size: 14px; }
+        .recommendation span { color: #71717a; font-size: 13px; }
       </style></head><body>
-        <article id="region">
-          <h1>A focused translation workflow</h1>
-          <p>LingoFrame translates the content region that the reader chooses.</p>
-          <p><a id="danger" href="#clicked">Selecting this link must not navigate.</a></p>
-        </article>
-        <aside id="outside">This text is outside the selected region.</aside>
-        <button id="page-button">Page button</button>
+        <div class="shell">
+          <nav class="rail" aria-label="Demo publication navigation">
+            <div class="rail-mark">N</div>
+            <div class="rail-icon round"></div>
+            <div class="rail-icon"></div>
+            <div class="rail-icon line"></div>
+            <div class="rail-icon round"></div>
+            <div class="rail-icon"></div>
+          </nav>
+          <main class="content">
+            <header class="topbar"><span class="back">←</span><strong>Article</strong></header>
+            <div class="author">
+              <div class="avatar">AC</div>
+              <div class="author-copy"><strong>Aria Chen</strong><span>@ariawrites · 8 min read</span></div>
+            </div>
+            <article id="region">
+              <h1>How small questions reshape a big idea</h1>
+              <p>Reading becomes active when we pause at uncertainty, connect it to what we know, and let new context change the whole picture.</p>
+              <figure class="essay-visual" aria-label="An abstract map of connected ideas">
+                <svg aria-hidden="true" viewBox="0 0 620 190" fill="none">
+                  <path d="M70 132C145 132 164 48 242 61C319 74 342 145 420 126C474 113 500 70 552 55" stroke="#27272a" stroke-width="4" stroke-linecap="round"/>
+                  <path d="M72 132L242 61L420 126L552 55" stroke="#7c3aed" stroke-width="2" stroke-dasharray="7 9" opacity=".55"/>
+                  <circle cx="70" cy="132" r="12" fill="#4f46e5"/>
+                  <circle cx="242" cy="61" r="12" fill="#ffffff" stroke="#27272a" stroke-width="4"/>
+                  <circle cx="420" cy="126" r="12" fill="#ffffff" stroke="#7c3aed" stroke-width="4"/>
+                  <circle cx="552" cy="55" r="12" fill="#27272a"/>
+                  <path d="M170 125L189 92L208 125H170Z" fill="#ffffff" stroke="#27272a" stroke-width="3"/>
+                  <path d="M335 62C335 49 345 39 358 39C371 39 381 49 381 62C381 75 358 91 358 91C358 91 335 75 335 62Z" fill="#ddd6fe" stroke="#7c3aed" stroke-width="3"/>
+                </svg>
+              </figure>
+              <p><a id="danger" href="#clicked">Keep the original nearby while you explore the translation.</a></p>
+            </article>
+            <aside id="outside" class="discussion">
+              <span>Reader notes stay outside the selected article Region.</span>
+              <button id="page-button">Save article</button>
+            </aside>
+          </main>
+          <aside class="side">
+            <div class="search">Search essays</div>
+            <section class="side-card">
+              <h2>More thoughtful reads</h2>
+              <div class="recommendation"><strong>Designing for deliberate attention</strong><span>6 min read</span></div>
+              <div class="recommendation"><strong>What diagrams leave unsaid</strong><span>9 min read</span></div>
+              <div class="recommendation"><strong>A practice for clearer questions</strong><span>5 min read</span></div>
+            </section>
+          </aside>
+        </div>
         <script>
           window.pageClicks = 0;
           window.captureClicks = 0;
           window.addEventListener('pointerdown', () => window.captureClicks++, true);
           window.addEventListener('click', () => window.captureClicks++, true);
-          document.querySelector('#danger').addEventListener('click', () => window.pageClicks++);
+          document.querySelector('#danger')?.addEventListener('click', () => window.pageClicks++);
           document.querySelector('#page-button').addEventListener('click', () => window.pageClicks++);
           if (location.pathname === '/shadow') {
             const host = document.createElement('shadow-region-host');
@@ -97,7 +167,7 @@ test.beforeAll(async () => {
             scroller.id = 'nested-scroller';
             scroller.style.cssText = 'height:120px;overflow:auto;margin-top:24px;background:white';
             scroller.innerHTML = '<div style="height:480px;padding:20px">Scrollable region content</div>';
-            document.body.append(scroller);
+            document.body.replaceChildren(scroller);
           }
           if (location.pathname === '/failure') {
             const failureRegion = document.createElement('article');
@@ -135,6 +205,7 @@ test.beforeAll(async () => {
   context = await chromium.launchPersistentContext(profilePath, {
     channel: "chromium",
     headless: true,
+    viewport: { width: 1280, height: 800 },
     args: [
       `--disable-extensions-except=${extensionPath}`,
       `--load-extension=${extensionPath}`,
@@ -205,6 +276,7 @@ test("selects one region, suppresses the page click, and renders bilingual text"
   await page.mouse.move(regionBox!.x + 12, regionBox!.y + 12);
   await expect(pickerFrame.locator(".lingo-frame-picker-highlight")).toBeVisible();
   if (process.env.CAPTURE_DEMO === "1") {
+    await page.waitForTimeout(100);
     await page.screenshot({ path: resolve("docs/images/region-picker.png") });
   }
   await page.mouse.click(regionBox!.x + 12, regionBox!.y + 12);
@@ -212,18 +284,18 @@ test("selects one region, suppresses the page click, and renders bilingual text"
   await expect(picker).toHaveCount(0);
   await expect(page.locator("#region .lingo-frame-bilingual-content")).toHaveCount(3);
   await expect(page.locator("#outside .lingo-frame-bilingual-content")).toHaveCount(0);
-  await expect(page.locator("#region")).toContainText("专注于当前内容的翻译流程");
+  await expect(page.locator("#region")).toContainText("小问题如何重塑一个大想法");
   await expect(page).not.toHaveURL(/#clicked$/);
   expect(await page.evaluate(() => (window as unknown as { pageClicks: number }).pageClicks)).toBe(0);
   expect(await page.evaluate(() => (window as unknown as { captureClicks: number }).captureClicks)).toBe(0);
   expect(providerRequests).toHaveLength(requestCount + 1);
   expect(providerRequests.at(-1)?.units.map(({ text }) => text)).toEqual([
-    "A focused translation workflow",
-    "LingoFrame translates the content region that the reader chooses.",
-    "Selecting this link must not navigate.",
+    "How small questions reshape a big idea",
+    "Reading becomes active when we pause at uncertainty, connect it to what we know, and let new context change the whole picture.",
+    "Keep the original nearby while you explore the translation.",
   ]);
   await expect(page.locator("#region h1 > .lingo-frame-bilingual-content"))
-    .toHaveText("专注于当前内容的翻译流程");
+    .toHaveText("小问题如何重塑一个大想法");
   await expect(page.locator("#danger .lingo-frame-bilingual-content")).toHaveCount(0);
   if (process.env.CAPTURE_DEMO === "1") {
     await page.screenshot({ path: resolve("docs/images/bilingual-result.png") });
