@@ -10,6 +10,7 @@ import {
   writeSettings,
   type Settings,
 } from "../../src/shared/settings";
+import { DEFAULT_TRANSLATION_INSTRUCTIONS } from "../../src/translation/prompt";
 
 const settings = ref<Settings>(structuredClone(DEFAULT_SETTINGS));
 const loading = ref(true);
@@ -20,8 +21,8 @@ const notice = ref<{ kind: "success" | "error"; text: string } | null>(null);
 const activeProvider = computed(() => settings.value.providers[settings.value.provider]);
 const providerDescription = computed(() => {
   return settings.value.provider === "deepseek"
-    ? "DeepSeek uses its OpenAI-compatible chat completions endpoint."
-    : "Use any service that implements the OpenAI chat completions API.";
+    ? "Use DeepSeek models for translation."
+    : "Use an OpenAI-compatible provider.";
 });
 
 onMounted(async () => {
@@ -85,11 +86,11 @@ async function testProvider(): Promise<void> {
     if (!response.ok) {
       throw new Error(response.error);
     }
-    notice.value = { kind: "success", text: "Provider connection succeeded" };
+    notice.value = { kind: "success", text: "Configuration test succeeded" };
   } catch (error) {
     notice.value = {
       kind: "error",
-      text: error instanceof Error ? error.message : "Provider test failed",
+      text: error instanceof Error ? error.message : "Configuration test failed",
     };
   } finally {
     busy.value = false;
@@ -110,16 +111,13 @@ async function testProvider(): Promise<void> {
 
     <section v-if="loading" class="card loading-card">Loading settings…</section>
 
-    <form v-else class="card" @submit.prevent="save">
-      <div class="field-grid">
-        <label>
-          <span>Translation provider</span>
-          <select v-model="settings.provider">
-            <option value="deepseek">DeepSeek</option>
-            <option value="openai-compatible">OpenAI-compatible</option>
-          </select>
-          <small>{{ providerDescription }}</small>
-        </label>
+    <form v-else class="settings-form" @submit.prevent="save">
+      <section class="card">
+        <div class="card-heading">
+          <p class="section-label">TRANSLATION</p>
+          <h2>Translation behavior</h2>
+          <p>Choose the target language and how translations should read.</p>
+        </div>
 
         <label>
           <span>Target language</span>
@@ -142,34 +140,119 @@ async function testProvider(): Promise<void> {
           </datalist>
           <small>Choose a suggestion or enter any language understood by the provider.</small>
         </label>
-      </div>
 
-      <label>
-        <span>API base URL</span>
-        <input v-model.trim="activeProvider.baseUrl" type="url" required spellcheck="false" />
-        <small>Use HTTPS. Plain HTTP is accepted only for localhost loopback services.</small>
-      </label>
+        <div
+          class="instructions-field"
+          role="group"
+          aria-labelledby="translation-instructions-label"
+        >
+          <div id="translation-instructions-label" class="field-title">
+            Translation instructions
+          </div>
+          <p class="field-description">
+            Set terminology, tone, audience, and writing style for your translations.
+          </p>
 
-      <label>
-        <span>Model</span>
-        <input v-model.trim="activeProvider.model" type="text" required spellcheck="false" />
-      </label>
+          <div class="instruction-modes">
+            <label class="mode-option">
+              <input
+                type="radio"
+                name="instruction-mode"
+                :checked="settings.translationInstructions === null"
+                @change="settings.translationInstructions = null"
+              />
+              <span>
+                <strong>Built-in default</strong>
+                <small>Uses LingoFrame's recommended translation behavior.</small>
+              </span>
+            </label>
+            <label class="mode-option">
+              <input
+                type="radio"
+                name="instruction-mode"
+                :checked="settings.translationInstructions !== null"
+                @change="settings.translationInstructions ??= DEFAULT_TRANSLATION_INSTRUCTIONS"
+              />
+              <span>
+                <strong>Custom</strong>
+                <small>Replaces the built-in translation preferences.</small>
+              </span>
+            </label>
+          </div>
 
-      <label>
-        <span>API key</span>
-        <div class="secret-field">
-          <input
-            v-model="activeProvider.apiKey"
-            :type="revealKey ? 'text' : 'password'"
-            autocomplete="off"
-            placeholder="Stored only in this browser profile"
-          />
-          <button class="reveal" type="button" @click="revealKey = !revealKey">
-            {{ revealKey ? "Hide" : "Show" }}
-          </button>
+          <details v-if="settings.translationInstructions === null" class="instructions-preview">
+            <summary>View built-in instructions</summary>
+            <pre>{{ DEFAULT_TRANSLATION_INSTRUCTIONS }}</pre>
+          </details>
+
+          <div v-else class="custom-instructions">
+            <textarea
+              v-model.trim="settings.translationInstructions"
+              required
+              spellcheck="true"
+              aria-label="Custom translation instructions"
+            />
+            <div class="custom-instructions-footer">
+              <small>
+                Your custom instructions replace the built-in translation preferences.
+              </small>
+              <button
+                class="reset"
+                type="button"
+                @click="settings.translationInstructions = null"
+              >
+                Reset to default
+              </button>
+            </div>
+          </div>
         </div>
-        <small>The key stays in Chrome extension storage and is never exposed to page scripts.</small>
-      </label>
+      </section>
+
+      <section class="card">
+        <div class="card-heading">
+          <p class="section-label">PROVIDER</p>
+          <h2>Translation provider</h2>
+          <p>Choose the service and model used for translation.</p>
+        </div>
+
+        <label>
+          <span>Provider</span>
+          <select v-model="settings.provider">
+            <option value="deepseek">DeepSeek</option>
+            <option value="openai-compatible">OpenAI-compatible</option>
+          </select>
+          <small>{{ providerDescription }}</small>
+        </label>
+
+        <label>
+          <span>API base URL</span>
+          <input v-model.trim="activeProvider.baseUrl" type="url" required spellcheck="false" />
+          <small>Use HTTPS. Plain HTTP is accepted only for localhost loopback services.</small>
+        </label>
+
+        <label>
+          <span>Model</span>
+          <input v-model.trim="activeProvider.model" type="text" required spellcheck="false" />
+        </label>
+
+        <label>
+          <span>API key</span>
+          <div class="secret-field">
+            <input
+              v-model="activeProvider.apiKey"
+              :type="revealKey ? 'text' : 'password'"
+              autocomplete="off"
+              placeholder="Stored only in this browser profile"
+            />
+            <button class="reveal" type="button" @click="revealKey = !revealKey">
+              {{ revealKey ? "Hide" : "Show" }}
+            </button>
+          </div>
+          <small>
+            Stored in this browser profile and used only to contact your chosen provider.
+          </small>
+        </label>
+      </section>
 
       <div v-if="notice" class="notice" :class="notice.kind" role="status">
         {{ notice.text }}
@@ -177,7 +260,7 @@ async function testProvider(): Promise<void> {
 
       <footer class="actions">
         <button class="secondary" type="button" :disabled="busy" @click="testProvider">
-          Test connection
+          Test configuration
         </button>
         <button class="primary" type="submit" :disabled="busy">
           {{ busy ? "Working…" : "Save settings" }}
@@ -186,7 +269,7 @@ async function testProvider(): Promise<void> {
     </form>
 
     <p class="privacy-note">
-      LingoFrame sends only the text from regions you explicitly select to the configured provider.
+      Only text you explicitly select is sent to your chosen provider.
     </p>
   </main>
 </template>

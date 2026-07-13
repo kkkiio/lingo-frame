@@ -18,6 +18,7 @@ export const providerSettingsSchema = z.object({
 export const settingsSchema = z.object({
   provider: providerIdSchema,
   targetLanguage: z.string().min(1),
+  translationInstructions: z.string().trim().min(1).nullable().default(null),
   providers: z.object({
     deepseek: providerSettingsSchema,
     "openai-compatible": providerSettingsSchema,
@@ -31,6 +32,7 @@ export type Settings = z.infer<typeof settingsSchema>;
 export const DEFAULT_SETTINGS: Settings = {
   provider: "deepseek",
   targetLanguage: "Simplified Chinese",
+  translationInstructions: null,
   providers: {
     deepseek: {
       apiKey: "",
