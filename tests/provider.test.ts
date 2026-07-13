@@ -39,9 +39,38 @@ describe("translateRegionWithProvider", () => {
     expect(body.response_format).toEqual({ type: "json_object" });
     expect(body.messages[0].content).toContain("Japanese");
     expect(body.messages[0].content).toContain("line-break structure");
+    expect(body.messages[0].content).toContain("LLM");
+    expect(body.messages[0].content).toContain("Attention in a Transformer context");
+    expect(body.messages[0].content.indexOf("<translation_instructions>"))
+      .toBeLessThan(body.messages[0].content.indexOf("Return one JSON object"));
     expect(JSON.parse(body.messages[1].content)).toEqual({
       units: [{ id: "unit-0", role: "paragraph", text: "Original\n\ntext" }],
     });
+  });
+
+  it("replaces translation preferences without replacing the response contract", async () => {
+    const settings: Settings = structuredClone(DEFAULT_SETTINGS);
+    settings.providers.deepseek.apiKey = "test-key";
+    settings.translationInstructions = "Use concise language for domain experts.";
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(JSON.stringify({
+      choices: [{ message: { content: JSON.stringify({
+        translations: [{ id: "unit-0", text: "Translated" }],
+      }) } }],
+    }), { status: 200 }));
+
+    await translateRegionWithProvider(
+      [{ id: "unit-0", role: "text", text: "Original" }],
+      settings,
+      new AbortController().signal,
+    );
+
+    const body = JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body));
+    const systemPrompt = body.messages[0].content as string;
+    expect(systemPrompt).toContain("Use concise language for domain experts.");
+    expect(systemPrompt).not.toContain("Attention in a Transformer context");
+    expect(systemPrompt).toContain("Translate every Translation Unit into Simplified Chinese.");
+    expect(systemPrompt).toContain("Return one JSON object");
+    expect(systemPrompt).toContain("Do not omit, merge, duplicate, or invent Translation Units.");
   });
 
   it("accepts a complete chat completions URL", async () => {

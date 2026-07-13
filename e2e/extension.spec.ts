@@ -469,12 +469,37 @@ test("loads stored provider settings in the extension options page", async () =>
   await page.goto(`${extensionOrigin}/options.html`);
 
   await expect(page.getByRole("heading", { name: "LingoFrame settings" })).toBeVisible();
-  await expect(page.getByLabel("Translation provider")).toHaveValue("openai-compatible");
+  const providerSelect = page.getByRole("combobox", { name: /^Provider/ });
+  await expect(providerSelect).toHaveValue("openai-compatible");
   await expect(page.getByLabel("Target language")).toHaveValue("Simplified Chinese");
   await expect(page.getByLabel("API base URL")).toHaveValue(`${origin}/v1`);
   await expect(page.getByLabel("API key")).toHaveAttribute("type", "password");
+  await expect(page.getByLabel("Built-in default")).toBeChecked();
 
-  await page.getByLabel("Translation provider").selectOption("deepseek");
+  await page.getByText("View built-in instructions").click();
+  await expect(page.locator(".instructions-preview")).toContainText("Attention");
+
+  await page.getByLabel("Custom").check();
+  const customInstructions = page.getByLabel("Custom translation instructions");
+  await expect(customInstructions).toHaveValue(/LLM/);
+  await customInstructions.fill("Use concise technical language for domain experts.");
+  await page.getByRole("button", { name: "Save settings" }).click();
+  await expect(page.getByRole("status")).toHaveText("Settings saved");
+  expect(await worker.evaluate(async () => {
+    const { settings } = await chrome.storage.local.get("settings");
+    return (settings as { translationInstructions: string | null }).translationInstructions;
+  })).toBe("Use concise technical language for domain experts.");
+
+  await page.getByRole("button", { name: "Reset to default" }).click();
+  await expect(page.getByLabel("Built-in default")).toBeChecked();
+  await page.getByRole("button", { name: "Save settings" }).click();
+  await expect(page.getByRole("status")).toHaveText("Settings saved");
+  expect(await worker.evaluate(async () => {
+    const { settings } = await chrome.storage.local.get("settings");
+    return (settings as { translationInstructions: string | null }).translationInstructions;
+  })).toBeNull();
+
+  await providerSelect.selectOption("deepseek");
   await expect(page.getByLabel("API base URL")).toHaveValue("https://api.deepseek.com");
   await page.close();
 });
