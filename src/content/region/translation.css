@@ -1,0 +1,89 @@
+/*
+ * Derived from FluentRead entrypoints/style.css.
+ * Upstream commit: ab1be13b31b9aaa874eb7e7d5ac652d722ba649a.
+ * Modified by LingoFrame contributors, 2026-07-13.
+ * SPDX-License-Identifier: GPL-3.0-only
+ */
+
+html.lingo-frame-is-picking,
+html.lingo-frame-is-picking * {
+  cursor: crosshair !important;
+}
+
+.lingo-frame-bilingual {
+  max-height: none !important;
+  -webkit-line-clamp: unset !important;
+}
+
+.lingo-frame-translation-slot {
+  display: block;
+}
+
+.lingo-frame-bilingual-content {
+  display: block;
+  box-sizing: border-box;
+  margin: 8px 0 !important;
+  background: transparent;
+  color: inherit;
+  font-weight: bold;
+  overflow-wrap: break-word;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.lingo-frame-loading {
+  all: initial;
+  display: inline-block;
+  width: 0.85em;
+  height: 0.85em;
+  margin-left: 0.45em;
+  border: 2px solid rgba(99, 102, 241, 0.25);
+  border-top-color: #6366f1;
+  border-radius: 50%;
+  vertical-align: middle;
+  animation: lingo-frame-spin 0.75s linear infinite;
+}
+
+.lingo-frame-failure {
+  all: initial;
+  display: flex;
+  align-items: center;
+  gap: 0.65em;
+  box-sizing: border-box;
+  margin-top: 0.5em;
+  padding: 0.55em 0.7em;
+  border: 1px solid #fecaca;
+  border-radius: 6px;
+  background: #fef2f2;
+  color: #991b1b;
+  font: 500 12px/1.4 ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.lingo-frame-toast {
+  all: initial;
+  position: fixed;
+  z-index: 2147483647;
+  left: 50%;
+  bottom: 28px;
+  transform: translateX(-50%);
+  padding: 10px 15px;
+  border-radius: 999px;
+  background: #171717;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.26);
+  color: #fff;
+  font: 600 13px/1 ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+@keyframes lingo-frame-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  .lingo-frame-failure {
+    border-color: #7f1d1d;
+    background: #450a0a;
+    color: #fecaca;
+  }
+}
