@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { afterEach, describe, expect, it } from "vitest";
 import { scanRegion } from "../src/content/region/scan-region";
 
@@ -81,6 +82,32 @@ describe("scanRegion", () => {
 
     expect(units).toHaveLength(1);
     expect(units[0]?.element.id).toBe("selected");
+  });
+
+  it("reads natural-language prose when a pre element is the selected root", () => {
+    document.body.innerHTML = readFileSync(
+      "tests/fixtures/region-scanning/prose--preformatted-article.html",
+      "utf8",
+    );
+
+    const root = document.querySelector("#selected")!;
+    const units = scanRegion(root);
+
+    expect(units).toHaveLength(1);
+    expect(units[0]).toMatchObject({
+      element: root,
+      role: "text",
+      text: "Preformatted prose can carry a complete article without containing source code.",
+      slot: { parent: root, before: null },
+    });
+  });
+
+  it("keeps code excluded when the selected pre contains a code element", () => {
+    document.body.innerHTML = `
+      <pre id="selected"><code>const privateCode = true;</code></pre>
+    `;
+
+    expect(scanRegion(document.querySelector("#selected")!)).toEqual([]);
   });
 
   it("does not translate a selected root that is hidden, editable, or owned by the extension", () => {
