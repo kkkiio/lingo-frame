@@ -81,7 +81,7 @@ export function scanRegion(root: Element): RegionTranslationUnit[] {
         return NodeFilter.FILTER_SKIP;
       }
 
-      const isInline = INLINE_TAGS.has(tag) || ["inline", "inline-block", "contents"].includes(style.display);
+      const isInline = INLINE_TAGS.has(tag) || style.display === "contents" || style.display.startsWith("inline");
       if (!isInline) {
         candidates.push(node);
       }
