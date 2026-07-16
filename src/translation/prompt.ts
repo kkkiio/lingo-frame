@@ -1,14 +1,19 @@
 import type { Settings } from "../shared/settings";
 
 export const DEFAULT_TRANSLATION_INSTRUCTIONS = [
-  "Produce a faithful, natural translation appropriate for the text's domain and audience.",
+  "Produce an accurate, idiomatic translation appropriate for the text's domain and audience.",
+  [
+    "Translate the intended meaning rather than the source text word for word.",
+    "Rewrite source-language syntax and information structure whenever needed so the result reads naturally in the target language.",
+    "Preserve meaning and technical distinctions, but do not preserve wording or sentence structure at the expense of idiomatic expression.",
+  ].join(" "),
   [
     "Use terminology that is conventional among practitioners in the relevant domain.",
-    "Preserve a term in its original form when that form is more precise, recognizable, or natural than a localized translation.",
-    "This includes acronyms and initialisms such as LLM, product, model, library, and API names, and context-dependent technical terms such as Attention in a Transformer context.",
+    "Keep proper names in their original form, including product, model, library, and API names, as well as acronyms and initialisms such as LLM.",
+    "Preserve a technical term in its original form when that form is more precise, recognizable, or natural than a localized translation.",
+    "This includes context-dependent technical terms such as Attention in a Transformer context.",
     "Integrate preserved terms naturally into the target-language sentence.",
     "Do not force a localized equivalent or add a redundant translated gloss merely to translate the term.",
-    "Translate ordinary prose normally.",
   ].join(" "),
   "Preserve the original tone unless the context clearly requires a more natural register in the target language.",
 ].join("\n\n");

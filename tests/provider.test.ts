@@ -39,6 +39,11 @@ describe("translateRegionWithProvider", () => {
     expect(body.response_format).toEqual({ type: "json_object" });
     expect(body.messages[0].content).toContain("Japanese");
     expect(body.messages[0].content).toContain("line-break structure");
+    expect(body.messages[0].content).toContain("accurate, idiomatic translation");
+    expect(body.messages[0].content).toContain("intended meaning rather than the source text word for word");
+    expect(body.messages[0].content).toContain("do not preserve wording or sentence structure");
+    expect(body.messages[0].content).toContain("Keep proper names in their original form");
+    expect(body.messages[0].content).toContain("product, model, library, and API names");
     expect(body.messages[0].content).toContain("LLM");
     expect(body.messages[0].content).toContain("Attention in a Transformer context");
     expect(body.messages[0].content.indexOf("<translation_instructions>"))
