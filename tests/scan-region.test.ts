@@ -72,6 +72,47 @@ describe("scanRegion", () => {
     expect(units[0]?.element.tagName).toBe("P");
   });
 
+  it("recognizes a heading through an inline editor wrapper", () => {
+    document.body.innerHTML = `
+      <article id="selected">
+        <div class="editor-block">Introductory paragraph</div>
+        <div style="display: inline"><h2>Draft editor section</h2></div>
+        <div class="editor-block">Section paragraph</div>
+      </article>
+      <h2 id="outside">Outside heading</h2>
+    `;
+
+    const units = scanRegion(document.querySelector("#selected")!);
+
+    expect(units.map(({ text, role }) => ({ text, role }))).toEqual([
+      { text: "Introductory paragraph", role: "text" },
+      { text: "Draft editor section", role: "heading" },
+      { text: "Section paragraph", role: "text" },
+    ]);
+    expect(units.some(({ element }) => element.id === "outside")).toBe(false);
+  });
+
+  it("keeps a Draft.js block inside a heading as the heading boundary", () => {
+    document.body.innerHTML = `
+      <article id="selected">
+        <div class="longform-unstyled"><div>Introductory paragraph</div></div>
+        <div style="display: inline">
+          <h2><div class="public-DraftStyleDefault-block"><span>Draft section</span></div></h2>
+        </div>
+        <div class="longform-unstyled"><div>Section paragraph</div></div>
+      </article>
+    `;
+
+    const units = scanRegion(document.querySelector("#selected")!);
+
+    expect(units.map(({ text, role, startsChunk }) => ({ text, role, startsChunk })))
+      .toEqual([
+        { text: "Introductory paragraph", role: "text", startsChunk: false },
+        { text: "Draft section", role: "heading", startsChunk: true },
+        { text: "Section paragraph", role: "text", startsChunk: false },
+      ]);
+  });
+
   it("skips hidden, editable, code, and already translated content", () => {
     document.body.innerHTML = `
       <section id="selected">
@@ -198,6 +239,7 @@ describe("scanRegion", () => {
       "2. Second item",
     ]);
     expect(units.map(({ role }) => role)).toEqual(["text", "text", "text"]);
+    expect(units.map(({ startsChunk }) => startsChunk)).toEqual([false, true, false]);
     expect(units[0]?.slot.before).toBe(breaks[0]);
     expect(units[1]?.slot.before).toBe(breaks[2]);
     expect(units[2]?.slot.before).toBeNull();
@@ -213,6 +255,7 @@ describe("scanRegion", () => {
 
     expect(units).toHaveLength(1);
     expect(units[0]?.text).toBe("First paragraph.\n\nSecond paragraph.");
+    expect(units[0]?.startsChunk).toBe(false);
     expect(units[0]?.slot).toEqual({ parent: root, before: null });
   });
 });

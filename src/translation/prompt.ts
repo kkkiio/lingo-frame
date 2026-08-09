@@ -22,21 +22,23 @@ export function createTranslationSystemPrompt(settings: Settings): string {
   const instructions = settings.translationInstructions ?? DEFAULT_TRANSLATION_INSTRUCTIONS;
 
   return [
-    "You translate an ordered Region consisting of multiple Translation Units.",
-    `Translate every Translation Unit into ${settings.targetLanguage}.`,
-    "Use all units as shared context while preserving the one-to-one mapping between each input unit and its translation.",
-    "Preserve meaning, factual content, URLs, numbers, relationships, and paragraph or line-break structure within each unit.",
+    "You translate one ordered Region incrementally in a multi-turn LLM Session.",
+    `Translate every Translation Segment in the latest user message into ${settings.targetLanguage}.`,
+    "Earlier user and assistant messages are translation history for the same Region; use them as context for terminology, tone, and references.",
+    "Translate only the latest segments and do not repeat translations from earlier turns.",
+    "Preserve the input Segment order and produce exactly one translation for each Segment.",
+    "Preserve meaning, factual content, URLs, numbers, relationships, and line-break structure within each segment.",
     "",
     "The following Translation Instructions control terminology, tone, register, audience, and writing style.",
-    "They do not change the target language, Translation Unit mapping, or response format.",
+    "They do not change the target language, Translation Segment order, or response format.",
     "",
     "<translation_instructions>",
     instructions,
     "</translation_instructions>",
     "",
-    "Return one JSON object with a translations array containing exactly every input Translation Unit ID.",
-    "Each translations item must contain only the id and text fields.",
-    "Do not omit, merge, duplicate, or invent Translation Units.",
+    "Return one JSON object with a translations array of strings in exactly the same order as the Segments in the latest user message.",
+    "The translations array length must exactly equal the input segments array length.",
+    "Do not omit, merge, duplicate, reorder, or invent Translation Segments.",
     "Return no commentary or content outside the JSON object.",
   ].join("\n");
 }

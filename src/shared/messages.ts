@@ -9,32 +9,54 @@ export type TranslationUnitRole =
   | "caption"
   | "text";
 
-export interface LLMSessionUnit {
+export interface TranslationSegment {
   id: string;
+  unitId: string;
   role: TranslationUnitRole;
   text: string;
 }
 
-export interface TranslateRegionMessage {
-  type: "TRANSLATE_REGION";
-  requestId: string;
-  units: LLMSessionUnit[];
+export interface TranslationChunk {
+  id: string;
+  segments: TranslationSegment[];
 }
 
-export interface CancelTranslationMessage {
-  type: "CANCEL_TRANSLATION";
-  requestId: string;
-}
+export const TRANSLATION_SESSION_PORT = "LINGO_FRAME_TRANSLATION_SESSION";
+
+export type TranslationSessionCommand =
+  | {
+    type: "START_TRANSLATION_SESSION";
+    sessionId: string;
+    chunks: TranslationChunk[];
+  }
+  | {
+    type: "CANCEL_TRANSLATION_SESSION";
+    sessionId: string;
+  };
+
+export type TranslationSessionEvent =
+  | {
+    type: "TRANSLATION_CHUNK_COMPLETED";
+    sessionId: string;
+    chunkId: string;
+    translations: TranslationResult[];
+  }
+  | {
+    type: "TRANSLATION_SESSION_COMPLETED";
+    sessionId: string;
+  }
+  | {
+    type: "TRANSLATION_SESSION_FAILED";
+    sessionId: string;
+    error: string;
+  };
 
 export interface TestProviderMessage {
   type: "TEST_PROVIDER";
   settings: Settings;
 }
 
-export type RuntimeMessage =
-  | TranslateRegionMessage
-  | CancelTranslationMessage
-  | TestProviderMessage;
+export type RuntimeMessage = TestProviderMessage;
 
 export interface TranslationResult {
   id: string;
@@ -42,5 +64,5 @@ export interface TranslationResult {
 }
 
 export type TranslationResponse =
-  | { ok: true; translations: TranslationResult[] }
+  | { ok: true }
   | { ok: false; error: string };
