@@ -196,6 +196,13 @@ test.beforeAll(async () => {
             preformattedRegion.textContent = 'Preformatted prose can carry a complete article without containing source code.';
             document.body.replaceChildren(preformattedRegion);
           }
+          if (location.pathname === '/mentions') {
+            const mentionRegion = document.createElement('div');
+            mentionRegion.id = 'mention-region';
+            mentionRegion.style.cssText = 'margin:40px;font:18px/1.6 Georgia,serif';
+            mentionRegion.innerHTML = 'Native web search is powered by <div style="display:inline-flex"><a href="#exa">@ExaAILabs</a></div> and <div style="display:inline-grid"><a href="#partner">@SearchPartner</a></div>.';
+            document.body.replaceChildren(mentionRegion);
+          }
         </script>
       </body></html>`);
   });
@@ -382,6 +389,28 @@ test("translates natural-language prose in an explicitly selected pre region", a
     id: "unit-0",
     role: "text",
     text: "Preformatted prose can carry a complete article without containing source code.",
+  }]);
+});
+
+test("keeps inline mentions in their surrounding translation unit", async () => {
+  const page = context.pages()[0]!;
+  await page.goto(`${origin}/mentions`);
+  await activatePicker();
+  const requestCount = providerRequests.length;
+
+  const region = page.locator("#mention-region");
+  const box = await region.boundingBox();
+  expect(box).not.toBeNull();
+  await page.mouse.move(box!.x + 12, box!.y + 12);
+  await page.mouse.click(box!.x + 12, box!.y + 12);
+
+  await expect(region.locator(":scope > .lingo-frame-bilingual-content")).toHaveCount(1);
+  await expect(region.locator(":scope > div > .lingo-frame-bilingual-content")).toHaveCount(0);
+  expect(providerRequests).toHaveLength(requestCount + 1);
+  expect(providerRequests.at(-1)?.units).toEqual([{
+    id: "unit-0",
+    role: "text",
+    text: "Native web search is powered by @ExaAILabs and @SearchPartner.",
   }]);
 });
 
