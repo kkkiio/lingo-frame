@@ -11,7 +11,8 @@ let worker: Worker;
 let profilePath: string;
 let extensionOrigin: string;
 let providerRequests: Array<{
-  units: Array<{ id: string; role: string; text: string }>;
+  segments: Array<{ role: string; text: string }>;
+  messages: Array<{ role: string; content: string }>;
 }> = [];
 
 test.beforeAll(async () => {
@@ -29,33 +30,43 @@ test.beforeAll(async () => {
       request.on("end", () => {
         const payload = JSON.parse(body);
         const providerRequest = JSON.parse(payload.messages.at(-1).content);
-        providerRequests.push(providerRequest);
+        providerRequests.push({
+          segments: providerRequest.segments,
+          messages: payload.messages,
+        });
         const translations: Record<string, string> = {
           "How small questions reshape a big idea": "小问题如何重塑一个大想法",
           "Reading becomes active when we pause at uncertainty, connect it to what we know, and let new context change the whole picture.": "当我们在不确定之处停下来，将它与已知经验连接，并让新的语境改变整体图景时，阅读就真正变得主动。",
           "Keep the original nearby while you explore the translation.": "探索译文时，让原文始终近在眼前。",
           "Readable text inside an open shadow root.": "开放式 Shadow Root 内的可读文本。",
           "First paragraph.": "第一段。",
+          "Second paragraph.": "第二段。",
           "1. First item": "1. 第一项",
           "2. Second item": "2. 第二项",
           "First paragraph.\n\nSecond paragraph.": "第一段。\n\n第二段。",
           "Preformatted prose can carry a complete article without containing source code.": "预格式化文本也可以承载不含源代码的完整文章。",
         };
         if (
-          providerRequest.units.some((unit: { text: string }) => unit.text === "Provider failure.")
+          providerRequest.segments.some(
+            (segment: { text: string }) => segment.text === "Provider failure.",
+          )
         ) {
           response.writeHead(429).end("rate limited");
           return;
         }
-        response.setHeader("Content-Type", "application/json");
-        response.end(JSON.stringify({
-          choices: [{ message: { content: JSON.stringify({
-            translations: providerRequest.units.map((unit: { id: string; text: string }) => ({
-              id: unit.id,
-              text: translations[unit.text] ?? `译文：${unit.text}`,
-            })),
-          }) } }],
-        }));
+        const delay = providerRequest.segments.some(
+          ({ text }: { text: string }) => text === "Second section",
+        ) ? 700 : 0;
+        setTimeout(() => {
+          response.setHeader("Content-Type", "application/json");
+          response.end(JSON.stringify({
+            choices: [{ message: { content: JSON.stringify({
+              translations: providerRequest.segments.map((segment: { text: string }) => (
+                translations[segment.text] ?? `译文：${segment.text}`
+              )),
+            }) } }],
+          }));
+        }, delay);
       });
       return;
     }
@@ -196,6 +207,24 @@ test.beforeAll(async () => {
             preformattedRegion.textContent = 'Preformatted prose can carry a complete article without containing source code.';
             document.body.replaceChildren(preformattedRegion);
           }
+          if (location.pathname === '/progress-claudefast') {
+            const article = document.createElement('article');
+            article.id = 'progress-claudefast-region';
+            article.innerHTML = '<h1>Article title</h1><p>Introduction paragraph</p>' +
+              '<h2>Second section</h2><p>Section paragraph</p>' +
+              '<h3>Third section</h3><p>Closing paragraph</p>';
+            document.body.replaceChildren(article);
+          }
+          if (location.pathname === '/progress-x') {
+            const shell = document.createElement('main');
+            shell.id = 'progress-x-shell';
+            shell.innerHTML = '<div id="progress-x-region" data-testid="longformRichTextComponent" style="padding:24px"><div>' +
+              '<div class="longform-unstyled"><div>Draft introduction</div></div>' +
+              '<div style="display:inline"><h2><div class="public-DraftStyleDefault-block"><span>Second section</span></div></h2></div>' +
+              '<div class="longform-unstyled"><div><span>Draft section paragraph</span></div></div>' +
+              '</div></div><button id="x-outside-control">Timeline control</button>';
+            document.body.replaceChildren(shell);
+          }
         </script>
       </body></html>`);
   });
@@ -297,7 +326,7 @@ test("selects one region, suppresses the page click, and renders bilingual text"
   expect(await page.evaluate(() => (window as unknown as { pageClicks: number }).pageClicks)).toBe(0);
   expect(await page.evaluate(() => (window as unknown as { captureClicks: number }).captureClicks)).toBe(0);
   expect(providerRequests).toHaveLength(requestCount + 1);
-  expect(providerRequests.at(-1)?.units.map(({ text }) => text)).toEqual([
+  expect(providerRequests.at(-1)?.segments.map(({ text }) => text)).toEqual([
     "How small questions reshape a big idea",
     "Reading becomes active when we pause at uncertainty, connect it to what we know, and let new context change the whole picture.",
     "Keep the original nearby while you explore the translation.",
@@ -310,7 +339,7 @@ test("selects one region, suppresses the page click, and renders bilingual text"
   }
 });
 
-test("keeps hard-break content interleaved in one LLM Session message", async () => {
+test("uses a double hard break as a new turn in one LLM Session", async () => {
   const page = context.pages()[0]!;
   await page.goto(`${origin}/structure`);
   await activatePicker();
@@ -327,8 +356,10 @@ test("keeps hard-break content interleaved in one LLM Session message", async ()
   await expect(translations.nth(0)).toHaveText("第一段。");
   await expect(translations.nth(1)).toHaveText("1. 第一项");
   await expect(translations.nth(2)).toHaveText("2. 第二项");
-  expect(providerRequests).toHaveLength(requestCount + 1);
-  expect(providerRequests.at(-1)?.units.map(({ text }) => text)).toEqual([
+  expect(providerRequests).toHaveLength(requestCount + 2);
+  expect(providerRequests.slice(-2).flatMap(({ segments }) => (
+    segments.map(({ text }) => text)
+  ))).toEqual([
     "First paragraph.",
     "1. First item",
     "2. Second item",
@@ -351,12 +382,17 @@ test("preserves text-node line breaks in one translation block", async () => {
   await expect(translation).toHaveCount(1);
   await expect(translation).toHaveText("第一段。\n\n第二段。");
   await expect(translation).toHaveCSS("white-space", "pre-wrap");
-  expect(providerRequests).toHaveLength(requestCount + 1);
-  expect(providerRequests.at(-1)?.units).toEqual([{
-    id: "unit-0",
-    role: "text",
-    text: "First paragraph.\n\nSecond paragraph.",
-  }]);
+  expect(providerRequests).toHaveLength(requestCount + 2);
+  expect(providerRequests.slice(-2).map(({ segments }) => segments)).toEqual([
+    [{
+      role: "text",
+      text: "First paragraph.",
+    }],
+    [{
+      role: "text",
+      text: "Second paragraph.",
+    }],
+  ]);
 });
 
 test("translates natural-language prose in an explicitly selected pre region", async () => {
@@ -378,11 +414,64 @@ test("translates natural-language prose in an explicitly selected pre region", a
   await expect(translation).toHaveCount(1);
   await expect(translation).toHaveText("预格式化文本也可以承载不含源代码的完整文章。");
   expect(providerRequests).toHaveLength(requestCount + 1);
-  expect(providerRequests.at(-1)?.units).toEqual([{
-    id: "unit-0",
+  expect(providerRequests.at(-1)?.segments).toEqual([{
     role: "text",
     text: "Preformatted prose can carry a complete article without containing source code.",
   }]);
+});
+
+test("progressively translates a ClaudeFast-style structured article", async () => {
+  const page = context.pages()[0]!;
+  await page.goto(`${origin}/progress-claudefast`);
+  await activatePicker();
+  const requestCount = providerRequests.length;
+
+  const region = page.locator("#progress-claudefast-region");
+  const box = await region.boundingBox();
+  expect(box).not.toBeNull();
+  await page.mouse.move(box!.x + 12, box!.y + 12);
+  await page.mouse.click(box!.x + 12, box!.y + 12);
+
+  await expect(region.locator("h1 > .lingo-frame-bilingual-content"))
+    .toHaveText("译文：Article title");
+  await expect(region.locator("h2 .lingo-frame-loading")).toHaveCount(1);
+  await expect.poll(() => providerRequests.length).toBe(requestCount + 2);
+  const secondRequest = providerRequests.at(-1)!;
+  expect(secondRequest.messages.map(({ role }) => role))
+    .toEqual(["system", "user", "assistant", "user"]);
+  expect(JSON.parse(secondRequest.messages[1]!.content).segments.map(
+    ({ text }: { text: string }) => text,
+  )).toEqual(["Article title", "Introduction paragraph"]);
+  expect(secondRequest.segments.map(({ text }) => text))
+    .toEqual(["Second section", "Section paragraph"]);
+
+  await expect(region.locator(".lingo-frame-bilingual-content")).toHaveCount(6);
+  await expect(region.locator(".lingo-frame-loading")).toHaveCount(0);
+  expect(providerRequests).toHaveLength(requestCount + 3);
+});
+
+test("translates an X-style Draft.js article through inline heading wrappers", async () => {
+  const page = context.pages()[0]!;
+  await page.goto(`${origin}/progress-x`);
+  await activatePicker();
+  const requestCount = providerRequests.length;
+
+  const region = page.locator("#progress-x-region");
+  const box = await region.boundingBox();
+  expect(box).not.toBeNull();
+  await page.mouse.move(box!.x + 12, box!.y + 12);
+  await page.mouse.click(box!.x + 12, box!.y + 12);
+
+  await expect(region.locator(".lingo-frame-bilingual-content")).toHaveCount(3);
+  expect(providerRequests).toHaveLength(requestCount + 2);
+  expect(providerRequests.slice(-2).map(({ segments }) => (
+    segments.map(({ text }) => text)
+  ))).toEqual([
+    ["Draft introduction"],
+    ["Second section", "Draft section paragraph"],
+  ]);
+  await expect(page.locator("#x-outside-control .lingo-frame-translation-slot"))
+    .toHaveCount(0);
 });
 
 test("Escape removes the picker and restores normal page interaction", async () => {

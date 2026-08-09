@@ -41,6 +41,7 @@ export interface RegionTranslationUnit {
   element: HTMLElement;
   text: string;
   role: TranslationUnitRole;
+  startsChunk: boolean;
   slot: {
     parent: Node;
     before: ChildNode | null;
@@ -100,10 +101,20 @@ export function scanRegion(root: Element): RegionTranslationUnit[] {
     : uniqueCandidates;
   const ownerSet = new Set(owners);
   const units: RegionTranslationUnit[] = [];
+  const startedHeadings = new Set<HTMLElement>();
 
   for (const owner of owners) {
+    const closestHeading = owner.closest<HTMLElement>("h1, h2, h3, h4, h5, h6");
+    const heading = closestHeading && (
+      closestHeading === root || root.contains(closestHeading)
+    ) ? closestHeading : null;
+    const role = heading
+      ? "heading"
+      : ROLE_BY_TAG.get(owner.tagName.toLowerCase()) ?? "text";
     const textParts: string[] = [];
     let lastTextNode: Text | null = null;
+    let consecutiveBreaks = 0;
+    let startsChunk = false;
     const textWalker = document.createTreeWalker(
       owner,
       NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT,
@@ -151,23 +162,34 @@ export function scanRegion(root: Element): RegionTranslationUnit[] {
     while (textWalker.nextNode()) {
       const current = textWalker.currentNode;
       if (current instanceof Text) {
+        if (textParts.length === 0 && consecutiveBreaks >= 2) {
+          startsChunk = true;
+        }
         textParts.push(current.textContent ?? "");
         lastTextNode = current;
+        consecutiveBreaks = 0;
         continue;
       }
 
       const text = textParts.join("").trim();
       if (text.length >= 2 && current.parentNode) {
+        const startsAtHeading = heading !== null && !startedHeadings.has(heading);
         units.push({
           id: `unit-${units.length}`,
           element: owner,
           text,
-          role: ROLE_BY_TAG.get(owner.tagName.toLowerCase()) ?? "text",
+          role,
+          startsChunk: startsChunk || startsAtHeading,
           slot: { parent: current.parentNode, before: current as ChildNode },
         });
+        if (heading) {
+          startedHeadings.add(heading);
+        }
       }
       textParts.length = 0;
       lastTextNode = null;
+      startsChunk = false;
+      consecutiveBreaks += 1;
     }
 
     const text = textParts.join("").trim();
@@ -180,13 +202,18 @@ export function scanRegion(root: Element): RegionTranslationUnit[] {
         }
         before = boundary.nextSibling;
       }
+      const startsAtHeading = heading !== null && !startedHeadings.has(heading);
       units.push({
         id: `unit-${units.length}`,
         element: owner,
         text,
-        role: ROLE_BY_TAG.get(owner.tagName.toLowerCase()) ?? "text",
+        role,
+        startsChunk: startsChunk || startsAtHeading,
         slot: { parent: owner, before },
       });
+      if (heading) {
+        startedHeadings.add(heading);
+      }
     }
   }
 
