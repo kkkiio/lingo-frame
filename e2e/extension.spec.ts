@@ -225,6 +225,13 @@ test.beforeAll(async () => {
               '</div></div><button id="x-outside-control">Timeline control</button>';
             document.body.replaceChildren(shell);
           }
+          if (location.pathname === '/mentions') {
+            const mentionRegion = document.createElement('div');
+            mentionRegion.id = 'mention-region';
+            mentionRegion.style.cssText = 'margin:40px;font:18px/1.6 Georgia,serif';
+            mentionRegion.innerHTML = 'Native web search is powered by <div style="display:inline-flex"><a href="#exa">@ExaAILabs</a></div> and <div style="display:inline-grid"><a href="#partner">@SearchPartner</a></div>.';
+            document.body.replaceChildren(mentionRegion);
+          }
         </script>
       </body></html>`);
   });
@@ -472,6 +479,27 @@ test("translates an X-style Draft.js article through inline heading wrappers", a
   ]);
   await expect(page.locator("#x-outside-control .lingo-frame-translation-slot"))
     .toHaveCount(0);
+});
+
+test("keeps inline mentions in their surrounding translation unit", async () => {
+  const page = context.pages()[0]!;
+  await page.goto(`${origin}/mentions`);
+  await activatePicker();
+  const requestCount = providerRequests.length;
+
+  const region = page.locator("#mention-region");
+  const box = await region.boundingBox();
+  expect(box).not.toBeNull();
+  await page.mouse.move(box!.x + 12, box!.y + 12);
+  await page.mouse.click(box!.x + 12, box!.y + 12);
+
+  await expect(region.locator(":scope > .lingo-frame-bilingual-content")).toHaveCount(1);
+  await expect(region.locator(":scope > div > .lingo-frame-bilingual-content")).toHaveCount(0);
+  expect(providerRequests).toHaveLength(requestCount + 1);
+  expect(providerRequests.at(-1)?.segments).toEqual([{
+    role: "text",
+    text: "Native web search is powered by @ExaAILabs and @SearchPartner.",
+  }]);
 });
 
 test("Escape removes the picker and restores normal page interaction", async () => {

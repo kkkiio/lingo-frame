@@ -45,6 +45,22 @@ describe("scanRegion", () => {
     expect(units.every(({ element }) => element.classList.contains("message"))).toBe(true);
   });
 
+  it("keeps inline formatting contexts inside their surrounding translation unit", () => {
+    document.body.innerHTML = `
+      <div id="selected">Native web search is powered by <div style="display: inline-flex"><a>@ExaAILabs</a></div> and <div style="display: inline-grid"><a>@SearchPartner</a></div>.</div>
+    `;
+
+    const root = document.querySelector("#selected")!;
+    const units = scanRegion(root);
+
+    expect(units).toHaveLength(1);
+    expect(units[0]).toMatchObject({
+      element: root,
+      text: "Native web search is powered by @ExaAILabs and @SearchPartner.",
+      slot: { parent: root, before: null },
+    });
+  });
+
   it("does not duplicate parent and child candidates", () => {
     document.body.innerHTML = `
       <ul id="selected"><li><p>Nested paragraph content</p></li></ul>
