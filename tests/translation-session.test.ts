@@ -14,11 +14,13 @@ vi.mock("wxt/browser", () => ({
 
 import { scanRegion } from "../src/content/region/scan-region";
 import { RegionTranslationSession } from "../src/content/region/translation-session";
+import oversizedSegment from "./fixtures/translation-sessions/oversized-segment.txt?raw";
 import partialFailureArticle from "./fixtures/translation-sessions/partial-failure-article.html?raw";
 import progressiveArticle from "./fixtures/translation-sessions/progressive-article.html?raw";
+import segmentLimit from "./fixtures/translation-sessions/segment-limit.html?raw";
 import shortBlankLinePost from "./fixtures/translation-sessions/short-blank-line-post.txt?raw";
 import shortSections from "./fixtures/translation-sessions/short-sections.html?raw";
-import segmentLimit from "./fixtures/translation-sessions/segment-limit.html?raw";
+import softMaximum from "./fixtures/translation-sessions/soft-maximum.txt?raw";
 
 interface FakePort {
   name: string;
@@ -155,6 +157,38 @@ describe("RegionTranslationSession", () => {
 
     expect(slot.textContent).toBe("第一段。\n\n第二段。\n\n第三段。");
     expect(root.getAttribute("data-lingo-frame-translated")).toBe("true");
+  });
+
+  it("flushes a subminimum prefix before crossing the soft maximum", async () => {
+    const root = document.createElement("pre");
+    root.textContent = softMaximum;
+    document.body.appendChild(root);
+    const session = new RegionTranslationSession(scanRegion(root));
+
+    session.run();
+    const start = port.posted[0];
+    if (!start || start.type !== "START_TRANSLATION_SESSION") {
+      throw new Error("Translation Session did not start");
+    }
+
+    expect(start).toMatchSnapshot({ sessionId: expect.any(String) });
+    session.cancel();
+  });
+
+  it("isolates a Segment that exceeds the hard maximum", async () => {
+    const root = document.createElement("pre");
+    root.textContent = oversizedSegment;
+    document.body.appendChild(root);
+    const session = new RegionTranslationSession(scanRegion(root));
+
+    session.run();
+    const start = port.posted[0];
+    if (!start || start.type !== "START_TRANSLATION_SESSION") {
+      throw new Error("Translation Session did not start");
+    }
+
+    expect(start).toMatchSnapshot({ sessionId: expect.any(String) });
+    session.cancel();
   });
 
   it("merges short sections until the first feedback window is useful", async () => {

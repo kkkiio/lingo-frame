@@ -36,7 +36,7 @@ lingo-frame/
 ├── e2e/                          # 真实 Chromium 扩展交互测试与 README 截图源
 ├── public/icons/                 # Chrome manifest 图标和矢量源文件
 ├── docs/images/                  # 经 E2E 生成并人工核验的产品截图
-├── docs/engineering/             # LLM Session 等长期工程决策
+├── docs/adr/                     # LLM Session、分片等长期工程决策
 ├── wxt.config.ts                 # MV3 权限、命令、图标和构建差异
 ├── UPSTREAM.md                   # FluentRead 基线与 Region Picker 参考归属
 └── LICENSE                       # GPL-3.0-only 全文

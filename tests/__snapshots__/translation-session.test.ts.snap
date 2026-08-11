@@ -121,6 +121,37 @@ exports[`RegionTranslationSession > caps each request at sixteen segments 1`] = 
 }
 `;
 
+exports[`RegionTranslationSession > flushes a subminimum prefix before crossing the soft maximum 1`] = `
+{
+  "chunks": [
+    {
+      "id": "chunk-0",
+      "segments": [
+        {
+          "id": "unit-0:segment-0",
+          "role": "text",
+          "text": "context context context context context context context context context context context context context context context context context context context context context context context context context context context context context context context context context context context context context context context context context context context context context context context context context context context context context context context context context context context context context context context context context context context context context context",
+          "unitId": "unit-0",
+        },
+      ],
+    },
+    {
+      "id": "chunk-1",
+      "segments": [
+        {
+          "id": "unit-0:segment-1",
+          "role": "text",
+          "text": "detail detail detail detail detail detail detail detail detail detail detail detail detail detail detail detail detail detail detail detail detail detail detail detail detail detail detail detail detail detail detail detail detail detail detail detail detail detail detail detail detail detail detail detail detail detail detail detail detail detail detail detail detail detail detail detail detail detail detail detail detail detail detail detail detail detail detail detail detail detail detail detail detail detail detail detail detail detail detail detail detail detail detail detail detail detail detail detail detail detail detail detail detail detail detail detail detail detail detail detail",
+          "unitId": "unit-0",
+        },
+      ],
+    },
+  ],
+  "sessionId": Any<String>,
+  "type": "START_TRANSLATION_SESSION",
+}
+`;
+
 exports[`RegionTranslationSession > groups a heading with its section and renders completed chunks immediately 1`] = `
 {
   "chunks": [
@@ -167,6 +198,37 @@ exports[`RegionTranslationSession > groups a heading with its section and render
           "role": "paragraph",
           "text": "Closing paragraph",
           "unitId": "unit-5",
+        },
+      ],
+    },
+  ],
+  "sessionId": Any<String>,
+  "type": "START_TRANSLATION_SESSION",
+}
+`;
+
+exports[`RegionTranslationSession > isolates a Segment that exceeds the hard maximum 1`] = `
+{
+  "chunks": [
+    {
+      "id": "chunk-0",
+      "segments": [
+        {
+          "id": "unit-0:segment-0",
+          "role": "text",
+          "text": "Short prefix.",
+          "unitId": "unit-0",
+        },
+      ],
+    },
+    {
+      "id": "chunk-1",
+      "segments": [
+        {
+          "id": "unit-0:segment-1",
+          "role": "text",
+          "text": "界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界",
+          "unitId": "unit-0",
         },
       ],
     },

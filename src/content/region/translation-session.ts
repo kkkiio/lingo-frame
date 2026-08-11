@@ -88,10 +88,9 @@ export class RegionTranslationSession {
         const reachedPreferredBoundary = prefersBreakBefore &&
           currentEstimatedTokens >= minimumTokens;
         const reachedTarget = currentEstimatedTokens >= targetTokens;
-        const wouldExceedSoftMaximum = currentEstimatedTokens >= minimumTokens &&
-          currentEstimatedTokens + estimatedTokens > maximumTokens;
-        const wouldExceedHardMaximum = estimatedTokens <= HARD_MAX_ESTIMATED_TOKENS &&
-          currentEstimatedTokens + estimatedTokens > HARD_MAX_ESTIMATED_TOKENS;
+        const wouldExceedSoftMaximum = currentEstimatedTokens + estimatedTokens > maximumTokens;
+        const wouldExceedHardMaximum = currentEstimatedTokens + estimatedTokens >
+          HARD_MAX_ESTIMATED_TOKENS;
         const reachedSegmentLimit = currentSegments.length >= MAX_SEGMENTS_PER_CHUNK;
         if (hasCurrentSegments && (
           reachedPreferredBoundary ||
