@@ -1,0 +1,302 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`RegionTranslationSession > caps each request at sixteen segments 1`] = `
+{
+  "chunks": [
+    {
+      "id": "chunk-0",
+      "segments": [
+        {
+          "id": "unit-0:segment-0",
+          "role": "paragraph",
+          "text": "Readable item 1.",
+          "unitId": "unit-0",
+        },
+        {
+          "id": "unit-1:segment-0",
+          "role": "paragraph",
+          "text": "Readable item 2.",
+          "unitId": "unit-1",
+        },
+        {
+          "id": "unit-2:segment-0",
+          "role": "paragraph",
+          "text": "Readable item 3.",
+          "unitId": "unit-2",
+        },
+        {
+          "id": "unit-3:segment-0",
+          "role": "paragraph",
+          "text": "Readable item 4.",
+          "unitId": "unit-3",
+        },
+        {
+          "id": "unit-4:segment-0",
+          "role": "paragraph",
+          "text": "Readable item 5.",
+          "unitId": "unit-4",
+        },
+        {
+          "id": "unit-5:segment-0",
+          "role": "paragraph",
+          "text": "Readable item 6.",
+          "unitId": "unit-5",
+        },
+        {
+          "id": "unit-6:segment-0",
+          "role": "paragraph",
+          "text": "Readable item 7.",
+          "unitId": "unit-6",
+        },
+        {
+          "id": "unit-7:segment-0",
+          "role": "paragraph",
+          "text": "Readable item 8.",
+          "unitId": "unit-7",
+        },
+        {
+          "id": "unit-8:segment-0",
+          "role": "paragraph",
+          "text": "Readable item 9.",
+          "unitId": "unit-8",
+        },
+        {
+          "id": "unit-9:segment-0",
+          "role": "paragraph",
+          "text": "Readable item 10.",
+          "unitId": "unit-9",
+        },
+        {
+          "id": "unit-10:segment-0",
+          "role": "paragraph",
+          "text": "Readable item 11.",
+          "unitId": "unit-10",
+        },
+        {
+          "id": "unit-11:segment-0",
+          "role": "paragraph",
+          "text": "Readable item 12.",
+          "unitId": "unit-11",
+        },
+        {
+          "id": "unit-12:segment-0",
+          "role": "paragraph",
+          "text": "Readable item 13.",
+          "unitId": "unit-12",
+        },
+        {
+          "id": "unit-13:segment-0",
+          "role": "paragraph",
+          "text": "Readable item 14.",
+          "unitId": "unit-13",
+        },
+        {
+          "id": "unit-14:segment-0",
+          "role": "paragraph",
+          "text": "Readable item 15.",
+          "unitId": "unit-14",
+        },
+        {
+          "id": "unit-15:segment-0",
+          "role": "paragraph",
+          "text": "Readable item 16.",
+          "unitId": "unit-15",
+        },
+      ],
+    },
+    {
+      "id": "chunk-1",
+      "segments": [
+        {
+          "id": "unit-16:segment-0",
+          "role": "paragraph",
+          "text": "Readable item 17.",
+          "unitId": "unit-16",
+        },
+      ],
+    },
+  ],
+  "sessionId": Any<String>,
+  "type": "START_TRANSLATION_SESSION",
+}
+`;
+
+exports[`RegionTranslationSession > groups a heading with its section and renders completed chunks immediately 1`] = `
+{
+  "chunks": [
+    {
+      "id": "chunk-0",
+      "segments": [
+        {
+          "id": "unit-0:segment-0",
+          "role": "heading",
+          "text": "Article title",
+          "unitId": "unit-0",
+        },
+        {
+          "id": "unit-1:segment-0",
+          "role": "paragraph",
+          "text": "Translation works best when each request carries enough context to preserve the argument instead of treating every sentence as an isolated fragment. A useful first response should arrive quickly, but it should also contain enough material for someone to begin reading without immediately waiting for another network round trip. This opening section therefore explains the central idea, connects it to the reader's goal, and establishes terminology that later sections can reuse. Keeping these related sentences together gives the model a coherent passage while still leaving the rest of the article available for progressive translation.",
+          "unitId": "unit-1",
+        },
+      ],
+    },
+    {
+      "id": "chunk-1",
+      "segments": [
+        {
+          "id": "unit-2:segment-0",
+          "role": "heading",
+          "text": "Second section",
+          "unitId": "unit-2",
+        },
+        {
+          "id": "unit-3:segment-0",
+          "role": "paragraph",
+          "text": "Section paragraph",
+          "unitId": "unit-3",
+        },
+        {
+          "id": "unit-4:segment-0",
+          "role": "heading",
+          "text": "Third section",
+          "unitId": "unit-4",
+        },
+        {
+          "id": "unit-5:segment-0",
+          "role": "paragraph",
+          "text": "Closing paragraph",
+          "unitId": "unit-5",
+        },
+      ],
+    },
+  ],
+  "sessionId": Any<String>,
+  "type": "START_TRANSLATION_SESSION",
+}
+`;
+
+exports[`RegionTranslationSession > keeps completed translations when a later chunk fails 1`] = `
+{
+  "chunks": [
+    {
+      "id": "chunk-0",
+      "segments": [
+        {
+          "id": "unit-0:segment-0",
+          "role": "heading",
+          "text": "First section",
+          "unitId": "unit-0",
+        },
+        {
+          "id": "unit-1:segment-0",
+          "role": "paragraph",
+          "text": "A completed translation must remain readable when a later provider request fails. The first section contains enough related material to form a useful response on its own: it introduces the topic, defines the important terms, and gives the reader a stable place to continue from. Once this chunk has been rendered, a rate limit or temporary network error in the following section should not erase successful work or replace it with a page-wide failure. Preserving the completed bilingual content makes progress visible and lets the reader distinguish translated material from the part that still needs attention.",
+          "unitId": "unit-1",
+        },
+      ],
+    },
+    {
+      "id": "chunk-1",
+      "segments": [
+        {
+          "id": "unit-2:segment-0",
+          "role": "heading",
+          "text": "Second section",
+          "unitId": "unit-2",
+        },
+        {
+          "id": "unit-3:segment-0",
+          "role": "paragraph",
+          "text": "Second paragraph",
+          "unitId": "unit-3",
+        },
+      ],
+    },
+  ],
+  "sessionId": Any<String>,
+  "type": "START_TRANSLATION_SESSION",
+}
+`;
+
+exports[`RegionTranslationSession > keeps short blank-line segments in one request and one Slot 1`] = `
+{
+  "chunks": [
+    {
+      "id": "chunk-0",
+      "segments": [
+        {
+          "id": "unit-0:segment-0",
+          "role": "text",
+          "text": "The benchmark result was surprising, although the two models had looked closely matched before.",
+          "unitId": "unit-0",
+        },
+        {
+          "id": "unit-0:segment-1",
+          "role": "text",
+          "text": "The difference might come from the evaluation harness or from the way one model was invoked.",
+          "unitId": "unit-0",
+        },
+        {
+          "id": "unit-0:segment-2",
+          "role": "text",
+          "text": "It might also be a genuine capability gap that only becomes obvious on this task.",
+          "unitId": "unit-0",
+        },
+      ],
+    },
+  ],
+  "sessionId": Any<String>,
+  "type": "START_TRANSLATION_SESSION",
+}
+`;
+
+exports[`RegionTranslationSession > merges short sections until the first feedback window is useful 1`] = `
+{
+  "chunks": [
+    {
+      "id": "chunk-0",
+      "segments": [
+        {
+          "id": "unit-0:segment-0",
+          "role": "heading",
+          "text": "First section",
+          "unitId": "unit-0",
+        },
+        {
+          "id": "unit-1:segment-0",
+          "role": "paragraph",
+          "text": "Short introduction.",
+          "unitId": "unit-1",
+        },
+        {
+          "id": "unit-2:segment-0",
+          "role": "heading",
+          "text": "Second section",
+          "unitId": "unit-2",
+        },
+        {
+          "id": "unit-3:segment-0",
+          "role": "paragraph",
+          "text": "Another short paragraph.",
+          "unitId": "unit-3",
+        },
+        {
+          "id": "unit-4:segment-0",
+          "role": "heading",
+          "text": "Third section",
+          "unitId": "unit-4",
+        },
+        {
+          "id": "unit-5:segment-0",
+          "role": "paragraph",
+          "text": "Closing paragraph.",
+          "unitId": "unit-5",
+        },
+      ],
+    },
+  ],
+  "sessionId": Any<String>,
+  "type": "START_TRANSLATION_SESSION",
+}
+`;

@@ -1,10 +1,13 @@
 import { test, expect, chromium, type BrowserContext, type Worker } from "@playwright/test";
+import { readFileSync } from "node:fs";
 import { createServer, type Server } from "node:http";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
-const progressiveIntroduction = "Introduction paragraph with enough context. ".repeat(20).trim();
+const progressiveArticle = readFileSync(resolve(
+  "tests/fixtures/translation-sessions/progressive-article.html",
+), "utf8").trim();
 
 let server: Server;
 let origin: string;
@@ -210,12 +213,8 @@ test.beforeAll(async () => {
             document.body.replaceChildren(preformattedRegion);
           }
           if (location.pathname === '/progress-claudefast') {
-            const article = document.createElement('article');
-            article.id = 'progress-claudefast-region';
-            article.innerHTML = '<h1>Article title</h1><p>${progressiveIntroduction}</p>' +
-              '<h2>Second section</h2><p>Section paragraph</p>' +
-              '<h3>Third section</h3><p>Closing paragraph</p>';
-            document.body.replaceChildren(article);
+            document.body.innerHTML = ${JSON.stringify(progressiveArticle)};
+            document.querySelector('#selected').id = 'progress-claudefast-region';
           }
           if (location.pathname === '/progress-x') {
             const shell = document.createElement('main');
@@ -448,7 +447,7 @@ test("progressively translates a ClaudeFast-style structured article", async () 
     .toEqual(["system", "user", "assistant", "user"]);
   expect(JSON.parse(secondRequest.messages[1]!.content).segments.map(
     ({ text }: { text: string }) => text,
-  )).toEqual(["Article title", progressiveIntroduction]);
+  )).toEqual(providerRequests.at(-2)?.segments.map(({ text }) => text));
   expect(secondRequest.segments.map(({ text }) => text))
     .toEqual([
       "Second section",

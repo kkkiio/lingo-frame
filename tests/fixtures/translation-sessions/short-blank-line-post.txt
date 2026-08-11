@@ -1,0 +1,5 @@
+The benchmark result was surprising, although the two models had looked closely matched before.
+
+The difference might come from the evaluation harness or from the way one model was invoked.
+
+It might also be a genuine capability gap that only becomes obvious on this task.
