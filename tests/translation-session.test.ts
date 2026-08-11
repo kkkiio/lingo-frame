@@ -73,10 +73,11 @@ afterEach(() => {
 
 describe("RegionTranslationSession", () => {
   it("groups a heading with its section and renders completed chunks immediately", async () => {
+    const introduction = "Introduction paragraph with enough context. ".repeat(20);
     document.body.innerHTML = `
       <article id="selected">
         <h1>Article title</h1>
-        <p>Introduction paragraph</p>
+        <p>${introduction}</p>
         <div style="display: inline"><h2>Second section</h2></div>
         <p>Section paragraph</p>
       </article>
@@ -92,7 +93,7 @@ describe("RegionTranslationSession", () => {
       throw new Error("Translation Session did not start");
     }
     expect(start.chunks.map(({ segments }) => segments.map(({ text }) => text))).toEqual([
-      ["Article title", "Introduction paragraph"],
+      ["Article title", introduction.trim()],
       ["Second section", "Section paragraph"],
     ]);
 
@@ -131,9 +132,9 @@ describe("RegionTranslationSession", () => {
     expect(document.querySelectorAll("[data-lingo-frame-translated='true']")).toHaveLength(4);
   });
 
-  it("splits text-node blank lines but merges translations into one Slot", async () => {
+  it("keeps short blank-line segments in one request and one Slot", async () => {
     const root = document.createElement("pre");
-    root.textContent = "First paragraph.\n\nSecond paragraph.";
+    root.textContent = "First paragraph.\n\nSecond paragraph.\n\nThird paragraph.";
     document.body.appendChild(root);
     const session = new RegionTranslationSession(scanRegion(root));
 
@@ -142,38 +143,76 @@ describe("RegionTranslationSession", () => {
     if (!start || start.type !== "START_TRANSLATION_SESSION") {
       throw new Error("Translation Session did not start");
     }
-    expect(start.chunks).toHaveLength(2);
+    expect(start.chunks).toHaveLength(1);
     expect(start.chunks.flatMap(({ segments }) => segments.map(({ unitId }) => unitId)))
-      .toEqual(["unit-0", "unit-0"]);
+      .toEqual(["unit-0", "unit-0", "unit-0"]);
 
     port.emit({
       type: "TRANSLATION_CHUNK_COMPLETED",
       sessionId: start.sessionId,
       chunkId: start.chunks[0]!.id,
-      translations: [{ id: start.chunks[0]!.segments[0]!.id, text: "第一段。" }],
+      translations: [
+        { id: start.chunks[0]!.segments[0]!.id, text: "第一段。" },
+        { id: start.chunks[0]!.segments[1]!.id, text: "第二段。" },
+        { id: start.chunks[0]!.segments[2]!.id, text: "第三段。" },
+      ],
     });
     const slot = root.querySelector(".lingo-frame-translation-slot")!;
-    expect(slot.textContent).toContain("第一段。");
-    expect(slot.querySelector(".lingo-frame-loading")).not.toBeNull();
-    expect(root.hasAttribute("data-lingo-frame-translated")).toBe(false);
-
-    port.emit({
-      type: "TRANSLATION_CHUNK_COMPLETED",
-      sessionId: start.sessionId,
-      chunkId: start.chunks[1]!.id,
-      translations: [{ id: start.chunks[1]!.segments[0]!.id, text: "第二段。" }],
-    });
     port.emit({ type: "TRANSLATION_SESSION_COMPLETED", sessionId: start.sessionId });
     await running;
 
-    expect(slot.textContent).toBe("第一段。\n\n第二段。");
+    expect(slot.textContent).toBe("第一段。\n\n第二段。\n\n第三段。");
     expect(root.getAttribute("data-lingo-frame-translated")).toBe("true");
   });
 
-  it("keeps completed translations when a later chunk fails", async () => {
+  it("merges short sections until the first feedback window is useful", async () => {
     document.body.innerHTML = `
       <article id="selected">
-        <h2>First section</h2><p>First paragraph</p>
+        <h2>First section</h2><p>Short introduction.</p>
+        <h2>Second section</h2><p>Another short paragraph.</p>
+        <h2>Third section</h2><p>Closing paragraph.</p>
+      </article>
+    `;
+    const session = new RegionTranslationSession(scanRegion(
+      document.querySelector("#selected")!,
+    ));
+
+    session.run();
+    const start = port.posted[0];
+    if (!start || start.type !== "START_TRANSLATION_SESSION") {
+      throw new Error("Translation Session did not start");
+    }
+
+    expect(start.chunks).toHaveLength(1);
+    expect(start.chunks[0]?.segments).toHaveLength(6);
+    session.cancel();
+  });
+
+  it("caps each request at sixteen segments", async () => {
+    const paragraphs = Array.from(
+      { length: 17 },
+      (_, index) => `<p>Readable item ${index + 1}.</p>`,
+    ).join("");
+    document.body.innerHTML = `<article id="selected">${paragraphs}</article>`;
+    const session = new RegionTranslationSession(scanRegion(
+      document.querySelector("#selected")!,
+    ));
+
+    session.run();
+    const start = port.posted[0];
+    if (!start || start.type !== "START_TRANSLATION_SESSION") {
+      throw new Error("Translation Session did not start");
+    }
+
+    expect(start.chunks.map(({ segments }) => segments.length)).toEqual([16, 1]);
+    session.cancel();
+  });
+
+  it("keeps completed translations when a later chunk fails", async () => {
+    const firstParagraph = "First-section context. ".repeat(35);
+    document.body.innerHTML = `
+      <article id="selected">
+        <h2>First section</h2><p>${firstParagraph}</p>
         <h2>Second section</h2><p>Second paragraph</p>
       </article>
     `;

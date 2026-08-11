@@ -4,6 +4,8 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
+const progressiveIntroduction = "Introduction paragraph with enough context. ".repeat(20).trim();
+
 let server: Server;
 let origin: string;
 let context: BrowserContext;
@@ -210,7 +212,7 @@ test.beforeAll(async () => {
           if (location.pathname === '/progress-claudefast') {
             const article = document.createElement('article');
             article.id = 'progress-claudefast-region';
-            article.innerHTML = '<h1>Article title</h1><p>Introduction paragraph</p>' +
+            article.innerHTML = '<h1>Article title</h1><p>${progressiveIntroduction}</p>' +
               '<h2>Second section</h2><p>Section paragraph</p>' +
               '<h3>Third section</h3><p>Closing paragraph</p>';
             document.body.replaceChildren(article);
@@ -346,7 +348,7 @@ test("selects one region, suppresses the page click, and renders bilingual text"
   }
 });
 
-test("uses a double hard break as a new turn in one LLM Session", async () => {
+test("coalesces short hard-break sections into one request", async () => {
   const page = context.pages()[0]!;
   await page.goto(`${origin}/structure`);
   await activatePicker();
@@ -363,10 +365,8 @@ test("uses a double hard break as a new turn in one LLM Session", async () => {
   await expect(translations.nth(0)).toHaveText("第一段。");
   await expect(translations.nth(1)).toHaveText("1. 第一项");
   await expect(translations.nth(2)).toHaveText("2. 第二项");
-  expect(providerRequests).toHaveLength(requestCount + 2);
-  expect(providerRequests.slice(-2).flatMap(({ segments }) => (
-    segments.map(({ text }) => text)
-  ))).toEqual([
+  expect(providerRequests).toHaveLength(requestCount + 1);
+  expect(providerRequests.at(-1)?.segments.map(({ text }) => text)).toEqual([
     "First paragraph.",
     "1. First item",
     "2. Second item",
@@ -389,16 +389,16 @@ test("preserves text-node line breaks in one translation block", async () => {
   await expect(translation).toHaveCount(1);
   await expect(translation).toHaveText("第一段。\n\n第二段。");
   await expect(translation).toHaveCSS("white-space", "pre-wrap");
-  expect(providerRequests).toHaveLength(requestCount + 2);
-  expect(providerRequests.slice(-2).map(({ segments }) => segments)).toEqual([
-    [{
+  expect(providerRequests).toHaveLength(requestCount + 1);
+  expect(providerRequests.at(-1)?.segments).toEqual([
+    {
       role: "text",
       text: "First paragraph.",
-    }],
-    [{
+    },
+    {
       role: "text",
       text: "Second paragraph.",
-    }],
+    },
   ]);
 });
 
@@ -448,13 +448,18 @@ test("progressively translates a ClaudeFast-style structured article", async () 
     .toEqual(["system", "user", "assistant", "user"]);
   expect(JSON.parse(secondRequest.messages[1]!.content).segments.map(
     ({ text }: { text: string }) => text,
-  )).toEqual(["Article title", "Introduction paragraph"]);
+  )).toEqual(["Article title", progressiveIntroduction]);
   expect(secondRequest.segments.map(({ text }) => text))
-    .toEqual(["Second section", "Section paragraph"]);
+    .toEqual([
+      "Second section",
+      "Section paragraph",
+      "Third section",
+      "Closing paragraph",
+    ]);
 
   await expect(region.locator(".lingo-frame-bilingual-content")).toHaveCount(6);
   await expect(region.locator(".lingo-frame-loading")).toHaveCount(0);
-  expect(providerRequests).toHaveLength(requestCount + 3);
+  expect(providerRequests).toHaveLength(requestCount + 2);
 });
 
 test("translates an X-style Draft.js article through inline heading wrappers", async () => {
@@ -470,12 +475,11 @@ test("translates an X-style Draft.js article through inline heading wrappers", a
   await page.mouse.click(box!.x + 12, box!.y + 12);
 
   await expect(region.locator(".lingo-frame-bilingual-content")).toHaveCount(3);
-  expect(providerRequests).toHaveLength(requestCount + 2);
-  expect(providerRequests.slice(-2).map(({ segments }) => (
-    segments.map(({ text }) => text)
-  ))).toEqual([
-    ["Draft introduction"],
-    ["Second section", "Draft section paragraph"],
+  expect(providerRequests).toHaveLength(requestCount + 1);
+  expect(providerRequests.at(-1)?.segments.map(({ text }) => text)).toEqual([
+    "Draft introduction",
+    "Second section",
+    "Draft section paragraph",
   ]);
   await expect(page.locator("#x-outside-control .lingo-frame-translation-slot"))
     .toHaveCount(0);

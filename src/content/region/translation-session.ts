@@ -15,6 +15,16 @@ import {
 } from "../../shared/messages";
 import type { RegionTranslationUnit } from "./scan-region";
 
+const FIRST_CHUNK_MIN_ESTIMATED_TOKENS = 200;
+const FIRST_CHUNK_TARGET_ESTIMATED_TOKENS = 300;
+const FIRST_CHUNK_MAX_ESTIMATED_TOKENS = 400;
+const NEXT_CHUNK_MIN_ESTIMATED_TOKENS = 500;
+const NEXT_CHUNK_TARGET_ESTIMATED_TOKENS = 750;
+const NEXT_CHUNK_MAX_ESTIMATED_TOKENS = 1_000;
+const HARD_MAX_ESTIMATED_TOKENS = 1_500;
+const MAX_SEGMENTS_PER_CHUNK = 16;
+const UTF8_BYTES_PER_ESTIMATED_TOKEN = 3;
+
 interface TaskSegment {
   id: string;
   separatorBefore: string;
@@ -46,6 +56,8 @@ export class RegionTranslationSession {
 
     const chunks: TranslationChunk[] = [];
     let currentSegments: TranslationSegment[] = [];
+    let currentEstimatedTokens = 0;
+    const textEncoder = new TextEncoder();
     for (const task of this.tasks) {
       const parts = task.unit.text.split(/(\r?\n[^\S\r\n]*\r?\n+)/);
       let segmentIndex = 0;
@@ -55,12 +67,42 @@ export class RegionTranslationSession {
           continue;
         }
 
-        const beginsChunk = segmentIndex > 0 || (
+        const prefersBreakBefore = segmentIndex > 0 || (
           segmentIndex === 0 && task.unit.startsChunk
         );
-        if (beginsChunk && currentSegments.length > 0) {
+        const estimatedTokens = Math.max(
+          1,
+          Math.ceil(textEncoder.encode(text).byteLength / UTF8_BYTES_PER_ESTIMATED_TOKEN),
+        );
+        const isFirstChunk = chunks.length === 0;
+        const minimumTokens = isFirstChunk
+          ? FIRST_CHUNK_MIN_ESTIMATED_TOKENS
+          : NEXT_CHUNK_MIN_ESTIMATED_TOKENS;
+        const targetTokens = isFirstChunk
+          ? FIRST_CHUNK_TARGET_ESTIMATED_TOKENS
+          : NEXT_CHUNK_TARGET_ESTIMATED_TOKENS;
+        const maximumTokens = isFirstChunk
+          ? FIRST_CHUNK_MAX_ESTIMATED_TOKENS
+          : NEXT_CHUNK_MAX_ESTIMATED_TOKENS;
+        const hasCurrentSegments = currentSegments.length > 0;
+        const reachedPreferredBoundary = prefersBreakBefore &&
+          currentEstimatedTokens >= minimumTokens;
+        const reachedTarget = currentEstimatedTokens >= targetTokens;
+        const wouldExceedSoftMaximum = currentEstimatedTokens >= minimumTokens &&
+          currentEstimatedTokens + estimatedTokens > maximumTokens;
+        const wouldExceedHardMaximum = estimatedTokens <= HARD_MAX_ESTIMATED_TOKENS &&
+          currentEstimatedTokens + estimatedTokens > HARD_MAX_ESTIMATED_TOKENS;
+        const reachedSegmentLimit = currentSegments.length >= MAX_SEGMENTS_PER_CHUNK;
+        if (hasCurrentSegments && (
+          reachedPreferredBoundary ||
+          reachedTarget ||
+          wouldExceedSoftMaximum ||
+          wouldExceedHardMaximum ||
+          reachedSegmentLimit
+        )) {
           chunks.push({ id: `chunk-${chunks.length}`, segments: currentSegments });
           currentSegments = [];
+          currentEstimatedTokens = 0;
         }
 
         const id = `${task.unit.id}:segment-${segmentIndex}`;
@@ -77,6 +119,7 @@ export class RegionTranslationSession {
         });
         this.tasksBySegmentId.set(id, task);
         currentSegments.push(segment);
+        currentEstimatedTokens += estimatedTokens;
         segmentIndex += 1;
       }
     }
