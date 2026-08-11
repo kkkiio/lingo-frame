@@ -14,6 +14,13 @@ vi.mock("wxt/browser", () => ({
 
 import { scanRegion } from "../src/content/region/scan-region";
 import { RegionTranslationSession } from "../src/content/region/translation-session";
+import oversizedSegment from "./fixtures/translation-sessions/oversized-segment.txt?raw";
+import partialFailureArticle from "./fixtures/translation-sessions/partial-failure-article.html?raw";
+import progressiveArticle from "./fixtures/translation-sessions/progressive-article.html?raw";
+import segmentLimit from "./fixtures/translation-sessions/segment-limit.html?raw";
+import shortBlankLinePost from "./fixtures/translation-sessions/short-blank-line-post.txt?raw";
+import shortSections from "./fixtures/translation-sessions/short-sections.html?raw";
+import softMaximum from "./fixtures/translation-sessions/soft-maximum.txt?raw";
 
 interface FakePort {
   name: string;
@@ -73,14 +80,7 @@ afterEach(() => {
 
 describe("RegionTranslationSession", () => {
   it("groups a heading with its section and renders completed chunks immediately", async () => {
-    document.body.innerHTML = `
-      <article id="selected">
-        <h1>Article title</h1>
-        <p>Introduction paragraph</p>
-        <div style="display: inline"><h2>Second section</h2></div>
-        <p>Section paragraph</p>
-      </article>
-    `;
+    document.body.innerHTML = progressiveArticle;
     const session = new RegionTranslationSession(scanRegion(
       document.querySelector("#selected")!,
     ));
@@ -91,10 +91,7 @@ describe("RegionTranslationSession", () => {
     if (!start || start.type !== "START_TRANSLATION_SESSION") {
       throw new Error("Translation Session did not start");
     }
-    expect(start.chunks.map(({ segments }) => segments.map(({ text }) => text))).toEqual([
-      ["Article title", "Introduction paragraph"],
-      ["Second section", "Section paragraph"],
-    ]);
+    expect(start).toMatchSnapshot({ sessionId: expect.any(String) });
 
     const firstChunk = start.chunks[0]!;
     port.emit({
@@ -107,7 +104,7 @@ describe("RegionTranslationSession", () => {
       })),
     });
     expect(document.querySelectorAll(".lingo-frame-bilingual-content")).toHaveLength(2);
-    expect(document.querySelectorAll(".lingo-frame-loading")).toHaveLength(2);
+    expect(document.querySelectorAll(".lingo-frame-loading")).toHaveLength(4);
     expect(document.querySelector("h1")?.textContent).toContain("文章标题");
 
     const secondChunk = start.chunks[1]!;
@@ -126,14 +123,14 @@ describe("RegionTranslationSession", () => {
     });
     await running;
 
-    expect(document.querySelectorAll(".lingo-frame-bilingual-content")).toHaveLength(4);
+    expect(document.querySelectorAll(".lingo-frame-bilingual-content")).toHaveLength(6);
     expect(document.querySelectorAll(".lingo-frame-loading")).toHaveLength(0);
-    expect(document.querySelectorAll("[data-lingo-frame-translated='true']")).toHaveLength(4);
+    expect(document.querySelectorAll("[data-lingo-frame-translated='true']")).toHaveLength(6);
   });
 
-  it("splits text-node blank lines but merges translations into one Slot", async () => {
+  it("keeps short blank-line segments in one request and one Slot", async () => {
     const root = document.createElement("pre");
-    root.textContent = "First paragraph.\n\nSecond paragraph.";
+    root.textContent = shortBlankLinePost;
     document.body.appendChild(root);
     const session = new RegionTranslationSession(scanRegion(root));
 
@@ -142,41 +139,92 @@ describe("RegionTranslationSession", () => {
     if (!start || start.type !== "START_TRANSLATION_SESSION") {
       throw new Error("Translation Session did not start");
     }
-    expect(start.chunks).toHaveLength(2);
-    expect(start.chunks.flatMap(({ segments }) => segments.map(({ unitId }) => unitId)))
-      .toEqual(["unit-0", "unit-0"]);
+    expect(start).toMatchSnapshot({ sessionId: expect.any(String) });
 
     port.emit({
       type: "TRANSLATION_CHUNK_COMPLETED",
       sessionId: start.sessionId,
       chunkId: start.chunks[0]!.id,
-      translations: [{ id: start.chunks[0]!.segments[0]!.id, text: "第一段。" }],
+      translations: [
+        { id: start.chunks[0]!.segments[0]!.id, text: "第一段。" },
+        { id: start.chunks[0]!.segments[1]!.id, text: "第二段。" },
+        { id: start.chunks[0]!.segments[2]!.id, text: "第三段。" },
+      ],
     });
     const slot = root.querySelector(".lingo-frame-translation-slot")!;
-    expect(slot.textContent).toContain("第一段。");
-    expect(slot.querySelector(".lingo-frame-loading")).not.toBeNull();
-    expect(root.hasAttribute("data-lingo-frame-translated")).toBe(false);
-
-    port.emit({
-      type: "TRANSLATION_CHUNK_COMPLETED",
-      sessionId: start.sessionId,
-      chunkId: start.chunks[1]!.id,
-      translations: [{ id: start.chunks[1]!.segments[0]!.id, text: "第二段。" }],
-    });
     port.emit({ type: "TRANSLATION_SESSION_COMPLETED", sessionId: start.sessionId });
     await running;
 
-    expect(slot.textContent).toBe("第一段。\n\n第二段。");
+    expect(slot.textContent).toBe("第一段。\n\n第二段。\n\n第三段。");
     expect(root.getAttribute("data-lingo-frame-translated")).toBe("true");
   });
 
+  it("flushes a subminimum prefix before crossing the soft maximum", async () => {
+    const root = document.createElement("pre");
+    root.textContent = softMaximum;
+    document.body.appendChild(root);
+    const session = new RegionTranslationSession(scanRegion(root));
+
+    session.run();
+    const start = port.posted[0];
+    if (!start || start.type !== "START_TRANSLATION_SESSION") {
+      throw new Error("Translation Session did not start");
+    }
+
+    expect(start).toMatchSnapshot({ sessionId: expect.any(String) });
+    session.cancel();
+  });
+
+  it("isolates a Segment that exceeds the hard maximum", async () => {
+    const root = document.createElement("pre");
+    root.textContent = oversizedSegment;
+    document.body.appendChild(root);
+    const session = new RegionTranslationSession(scanRegion(root));
+
+    session.run();
+    const start = port.posted[0];
+    if (!start || start.type !== "START_TRANSLATION_SESSION") {
+      throw new Error("Translation Session did not start");
+    }
+
+    expect(start).toMatchSnapshot({ sessionId: expect.any(String) });
+    session.cancel();
+  });
+
+  it("merges short sections until the first feedback window is useful", async () => {
+    document.body.innerHTML = shortSections;
+    const session = new RegionTranslationSession(scanRegion(
+      document.querySelector("#selected")!,
+    ));
+
+    session.run();
+    const start = port.posted[0];
+    if (!start || start.type !== "START_TRANSLATION_SESSION") {
+      throw new Error("Translation Session did not start");
+    }
+
+    expect(start).toMatchSnapshot({ sessionId: expect.any(String) });
+    session.cancel();
+  });
+
+  it("caps each request at sixteen segments", async () => {
+    document.body.innerHTML = segmentLimit;
+    const session = new RegionTranslationSession(scanRegion(
+      document.querySelector("#selected")!,
+    ));
+
+    session.run();
+    const start = port.posted[0];
+    if (!start || start.type !== "START_TRANSLATION_SESSION") {
+      throw new Error("Translation Session did not start");
+    }
+
+    expect(start).toMatchSnapshot({ sessionId: expect.any(String) });
+    session.cancel();
+  });
+
   it("keeps completed translations when a later chunk fails", async () => {
-    document.body.innerHTML = `
-      <article id="selected">
-        <h2>First section</h2><p>First paragraph</p>
-        <h2>Second section</h2><p>Second paragraph</p>
-      </article>
-    `;
+    document.body.innerHTML = partialFailureArticle;
     const session = new RegionTranslationSession(scanRegion(
       document.querySelector("#selected")!,
     ));
@@ -186,6 +234,7 @@ describe("RegionTranslationSession", () => {
     if (!start || start.type !== "START_TRANSLATION_SESSION") {
       throw new Error("Translation Session did not start");
     }
+    expect(start).toMatchSnapshot({ sessionId: expect.any(String) });
     const firstChunk = start.chunks[0]!;
     port.emit({
       type: "TRANSLATION_CHUNK_COMPLETED",

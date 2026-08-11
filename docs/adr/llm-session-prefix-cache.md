@@ -2,7 +2,7 @@
 
 ## 状态
 
-已采纳，适用于 Region 翻译协议、Provider transport 和 interleaved 双语渲染。
+已采纳，适用于 Region 翻译协议、Provider transport 和 interleaved 双语渲染。Translation Chunk 的边界与尺寸规则由 [Translation Chunk 尺寸窗口与反馈节奏](./translation-chunk-sizing.md) 修订。
 
 ## 决策
 
