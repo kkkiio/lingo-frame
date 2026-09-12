@@ -16,11 +16,11 @@ const DIRECT_TAGS = new Set([
 const SKIP_TAGS = new Set([
   "script", "style", "noscript", "template", "iframe",
   "input", "textarea", "select", "option", "button",
-  "code", "pre", "svg", "canvas",
+  "pre", "svg", "canvas",
 ]);
 
 const INLINE_TAGS = new Set([
-  "a", "abbr", "b", "bdi", "bdo", "br", "cite", "em", "i",
+  "a", "abbr", "b", "bdi", "bdo", "br", "cite", "code", "em", "i",
   "img", "mark", "q", "small", "span", "strong", "sub", "sup",
   "time", "u", "wbr",
 ]);
@@ -59,6 +59,7 @@ export function scanRegion(root: Element): RegionTranslationUnit[] {
       const tag = node.tagName.toLowerCase();
       if (
         SKIP_TAGS.has(tag) ||
+        node.matches("pre code") ||
         node.hidden ||
         node.getAttribute("aria-hidden") === "true" ||
         node.matches("[contenteditable=''], [contenteditable='true'], .notranslate, .sr-only") ||
@@ -137,6 +138,7 @@ export function scanRegion(root: Element): RegionTranslationUnit[] {
             if (
               (current !== owner && ownerSet.has(current)) ||
               (SKIP_TAGS.has(tag) && !isSelectedPreformattedText) ||
+              current.matches("pre code") ||
               current.hidden ||
               current.getAttribute("aria-hidden") === "true" ||
               current.matches("[contenteditable=''], [contenteditable='true'], .notranslate, .sr-only") ||

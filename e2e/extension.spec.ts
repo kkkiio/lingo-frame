@@ -50,6 +50,7 @@ test.beforeAll(async () => {
           "2. Second item": "2. 第二项",
           "First paragraph.\n\nSecond paragraph.": "第一段。\n\n第二段。",
           "Preformatted prose can carry a complete article without containing source code.": "预格式化文本也可以承载不含源代码的完整文章。",
+          "Why does /plan still cheat while /prewalk doesn't?": "为什么 /plan 仍然作弊，而 /prewalk 不会？",
         };
         if (
           providerRequest.segments.some(
@@ -232,6 +233,13 @@ test.beforeAll(async () => {
             mentionRegion.style.cssText = 'margin:40px;font:18px/1.6 Georgia,serif';
             mentionRegion.innerHTML = 'Native web search is powered by <div style="display:inline-flex"><a href="#exa">@ExaAILabs</a></div> and <div style="display:inline-grid"><a href="#partner">@SearchPartner</a></div>.';
             document.body.replaceChildren(mentionRegion);
+          }
+          if (location.pathname === '/inline-code') {
+            const article = document.createElement('article');
+            article.id = 'inline-code-region';
+            article.style.cssText = 'margin:40px;padding:24px';
+            article.innerHTML = '<p>Why does <code>/plan</code> still cheat while <code><span>/prewalk</span></code> doesn&#39;t?</p><pre><code>const example = true;</code></pre>';
+            document.body.replaceChildren(article);
           }
         </script>
       </body></html>`);
@@ -503,6 +511,34 @@ test("keeps inline mentions in their surrounding translation unit", async () => 
     role: "text",
     text: "Native web search is powered by @ExaAILabs and @SearchPartner.",
   }]);
+});
+
+test("translates prose containing inline commands as a complete paragraph", async () => {
+  const page = context.pages()[0]!;
+  await page.goto(`${origin}/inline-code`);
+  const region = page.locator("#inline-code-region");
+  const originalCode = await region.locator("code").evaluateAll(
+    (elements) => elements.map((element) => element.outerHTML),
+  );
+  const requestCount = providerRequests.length;
+  await activatePicker();
+
+  const box = await region.boundingBox();
+  expect(box).not.toBeNull();
+  await page.mouse.move(box!.x + 12, box!.y + 12);
+  await page.mouse.click(box!.x + 12, box!.y + 12);
+
+  const translation = region.locator("p > .lingo-frame-bilingual-content");
+  await expect(translation).toHaveText("为什么 /plan 仍然作弊，而 /prewalk 不会？");
+  await expect(region.locator(".lingo-frame-bilingual-content")).toHaveCount(1);
+  expect(providerRequests).toHaveLength(requestCount + 1);
+  expect(providerRequests.at(-1)?.segments).toEqual([{
+    role: "paragraph",
+    text: "Why does /plan still cheat while /prewalk doesn't?",
+  }]);
+  expect(await region.locator("code").evaluateAll(
+    (elements) => elements.map((element) => element.outerHTML),
+  )).toEqual(originalCode);
 });
 
 test("Escape removes the picker and restores normal page interaction", async () => {

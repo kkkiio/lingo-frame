@@ -72,6 +72,44 @@ describe("scanRegion", () => {
     expect(units[0]?.element.tagName).toBe("P");
   });
 
+  it("keeps inline code in the surrounding paragraph", () => {
+    document.body.innerHTML = `
+      <article id="selected">
+        <p>Why does <code>/plan</code> still cheat while <code><span>/prewalk</span></code> doesn't?</p>
+        <div>Run <code>pnpm test</code> before shipping.</div>
+        <pre><code>const example = true;</code></pre>
+      </article>
+      <p>Outside <code>/command</code></p>
+    `;
+
+    const root = document.querySelector("#selected")!;
+    const units = scanRegion(root);
+
+    expect(units.map(({ text, role }) => ({ text, role }))).toEqual([
+      { text: "Why does /plan still cheat while /prewalk doesn't?", role: "paragraph" },
+      { text: "Run pnpm test before shipping.", role: "text" },
+    ]);
+    expect(units[0]?.slot).toEqual({ parent: root.querySelector("p"), before: null });
+    expect(units[1]?.slot).toEqual({ parent: root.querySelector("div"), before: null });
+  });
+
+  it("reads an explicitly selected inline code region within its own boundary", () => {
+    document.body.innerHTML = `
+      <p>Run <code id="selected"><span>pnpm</span> test</code> before shipping.</p>
+    `;
+
+    const root = document.querySelector("#selected")!;
+    const units = scanRegion(root);
+
+    expect(units).toHaveLength(1);
+    expect(units[0]).toMatchObject({
+      element: root,
+      text: "pnpm test",
+      role: "text",
+      slot: { parent: root, before: null },
+    });
+  });
+
   it("recognizes a heading through an inline editor wrapper", () => {
     document.body.innerHTML = `
       <article id="selected">
