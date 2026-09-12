@@ -16,6 +16,7 @@ let worker: Worker;
 let profilePath: string;
 let extensionOrigin: string;
 let providerRequests: Array<{
+  body: Record<string, unknown>;
   segments: Array<{ role: string; text: string }>;
   messages: Array<{ role: string; content: string }>;
 }> = [];
@@ -36,6 +37,7 @@ test.beforeAll(async () => {
         const payload = JSON.parse(body);
         const providerRequest = JSON.parse(payload.messages.at(-1).content);
         providerRequests.push({
+          body: payload,
           segments: providerRequest.segments,
           messages: payload.messages,
         });
@@ -238,8 +240,14 @@ test.beforeAll(async () => {
             const article = document.createElement('article');
             article.id = 'inline-code-region';
             article.style.cssText = 'margin:40px;padding:24px';
-            article.innerHTML = '<p>Why does <code>/plan</code> still cheat while <code><span>/prewalk</span></code> doesn&#39;t?</p><pre><code>const example = true;</code></pre>';
+            article.innerHTML = '<p>Why does <code>/plan</code> still cheat while <code><span>/prewalk</span></code> doesn&#39;t?</p><pre><code>const example = true;</code></pre><code style="display:block">const block = true;</code><div><code>const wrapped = true;</code></div>';
             document.body.replaceChildren(article);
+          }
+          if (location.pathname === '/selected-code') {
+            document.body.innerHTML = ${JSON.stringify(readFileSync(
+              "tests/fixtures/region-scanning/code--selected-inside-pre.html", "utf8",
+            ))};
+            document.querySelector('#selected').style.cssText = 'display:inline-block;padding:20px;margin:40px';
           }
         </script>
       </body></html>`);
@@ -467,6 +475,8 @@ test("progressively translates a ClaudeFast-style structured article", async () 
   await expect(region.locator(".lingo-frame-bilingual-content")).toHaveCount(6);
   await expect(region.locator(".lingo-frame-loading")).toHaveCount(0);
   expect(providerRequests).toHaveLength(requestCount + 2);
+  expect(JSON.stringify(providerRequests.slice(requestCount).map(({ body }) => body), null, 2) + "\n")
+    .toMatchSnapshot("multi-turn-requests.json");
 });
 
 test("translates an X-style Draft.js article through inline heading wrappers", async () => {
@@ -536,9 +546,34 @@ test("translates prose containing inline commands as a complete paragraph", asyn
     role: "paragraph",
     text: "Why does /plan still cheat while /prewalk doesn't?",
   }]);
+  expect(JSON.stringify(providerRequests.at(-1)!.body, null, 2) + "\n")
+    .toMatchSnapshot("inline-code-request.json");
   expect(await region.locator("code").evaluateAll(
     (elements) => elements.map((element) => element.outerHTML),
   )).toEqual(originalCode);
+});
+
+test("translates an explicitly selected code region inside a pre", async () => {
+  const page = context.pages()[0]!;
+  await page.goto(`${origin}/selected-code`);
+  const requestCount = providerRequests.length;
+  await activatePicker();
+
+  const region = page.locator("#selected");
+  const box = await region.boundingBox();
+  expect(box).not.toBeNull();
+  await page.mouse.move(box!.x + 12, box!.y + 12);
+  await expect(page.frameLocator("iframe[data-lingo-frame-picker]")
+    .locator(".lingo-frame-picker-highlight")).toHaveAttribute("data-candidate", "code");
+  await page.mouse.click(box!.x + 12, box!.y + 12);
+
+  await expect(region.locator(":scope > .lingo-frame-bilingual-content"))
+    .toHaveText("译文：pnpm test");
+  expect(providerRequests).toHaveLength(requestCount + 1);
+  expect(providerRequests.at(-1)?.segments).toEqual([{
+    role: "text",
+    text: "pnpm test",
+  }]);
 });
 
 test("Escape removes the picker and restores normal page interaction", async () => {

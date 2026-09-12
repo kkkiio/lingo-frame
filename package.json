@@ -17,6 +17,7 @@
     "typecheck": "vue-tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:live": "vitest run --config vitest.live.config.ts",
     "e2e": "pnpm build:e2e && playwright test",
     "check": "pnpm typecheck && pnpm test && pnpm build"
   },

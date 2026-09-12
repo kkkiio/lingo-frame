@@ -1,0 +1,320 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`scanRegion > collects readable blocks only inside the selected root 1`] = `
+[
+  {
+    "role": "heading",
+    "startsChunk": true,
+    "text": "A useful title",
+  },
+  {
+    "role": "paragraph",
+    "startsChunk": false,
+    "text": "Read this paragraph carefully.",
+  },
+  {
+    "role": "list-item",
+    "startsChunk": false,
+    "text": "First list item",
+  },
+  {
+    "role": "list-item",
+    "startsChunk": false,
+    "text": "Second list item",
+  },
+]
+`;
+
+exports[`scanRegion > does not duplicate parent and child candidates 1`] = `
+[
+  {
+    "role": "paragraph",
+    "startsChunk": false,
+    "text": "Nested paragraph content",
+  },
+]
+`;
+
+exports[`scanRegion > falls back to the selected inline region without climbing outside it 1`] = `
+[
+  {
+    "role": "text",
+    "startsChunk": false,
+    "text": "selected inline phrase",
+  },
+]
+`;
+
+exports[`scanRegion > keeps a Draft.js block inside a heading as the heading boundary 1`] = `
+[
+  {
+    "role": "text",
+    "startsChunk": false,
+    "text": "Introductory paragraph",
+  },
+  {
+    "role": "heading",
+    "startsChunk": true,
+    "text": "Draft section",
+  },
+  {
+    "role": "text",
+    "startsChunk": false,
+    "text": "Section paragraph",
+  },
+]
+`;
+
+exports[`scanRegion > keeps a container's introductory text alongside nested paragraph units 1`] = `
+[
+  {
+    "role": "text",
+    "startsChunk": false,
+    "text": "Important introduction",
+  },
+  {
+    "role": "paragraph",
+    "startsChunk": false,
+    "text": "Paragraph body",
+  },
+  {
+    "role": "paragraph",
+    "startsChunk": false,
+    "text": "Second paragraph",
+  },
+]
+`;
+
+exports[`scanRegion > keeps fallback text while excluding code and hidden descendant content 1`] = `
+[
+  {
+    "role": "text",
+    "startsChunk": false,
+    "text": "Readable introduction",
+  },
+]
+`;
+
+exports[`scanRegion > keeps inline code in the surrounding paragraph 1`] = `
+[
+  {
+    "role": "paragraph",
+    "startsChunk": false,
+    "text": "Why does /plan still cheat while /prewalk doesn't?",
+  },
+  {
+    "role": "text",
+    "startsChunk": false,
+    "text": "Run pnpm test before shipping.",
+  },
+]
+`;
+
+exports[`scanRegion > keeps inline formatting contexts inside their surrounding translation unit 1`] = `
+[
+  {
+    "role": "text",
+    "startsChunk": false,
+    "text": "Native web search is powered by @ExaAILabs and @SearchPartner.",
+  },
+]
+`;
+
+exports[`scanRegion > keeps text-node line breaks inside one translation unit 1`] = `
+[
+  {
+    "role": "text",
+    "startsChunk": false,
+    "text": "First paragraph.
+
+Second paragraph.",
+  },
+]
+`;
+
+exports[`scanRegion > preserves a parent list item's own text without duplicating its child item 1`] = `
+[
+  {
+    "role": "list-item",
+    "startsChunk": false,
+    "text": "Parent item",
+  },
+  {
+    "role": "list-item",
+    "startsChunk": false,
+    "text": "Child item",
+  },
+]
+`;
+
+exports[`scanRegion > reads an explicitly selected inline code region within its own boundary 1`] = `
+[
+  {
+    "role": "text",
+    "startsChunk": false,
+    "text": "pnpm test",
+  },
+]
+`;
+
+exports[`scanRegion > reads natural-language prose when a pre element is the selected root 1`] = `
+[
+  {
+    "role": "text",
+    "startsChunk": false,
+    "text": "Preformatted prose can carry a complete article without containing source code.",
+  },
+]
+`;
+
+exports[`scanRegion > recognizes a heading through an inline editor wrapper 1`] = `
+[
+  {
+    "role": "text",
+    "startsChunk": false,
+    "text": "Introductory paragraph",
+  },
+  {
+    "role": "heading",
+    "startsChunk": true,
+    "text": "Draft editor section",
+  },
+  {
+    "role": "text",
+    "startsChunk": false,
+    "text": "Section paragraph",
+  },
+]
+`;
+
+exports[`scanRegion > scans code--hard-breaks.html 1`] = `
+[
+  {
+    "role": "text",
+    "startsChunk": false,
+    "text": "Try /plan first.",
+  },
+  {
+    "role": "text",
+    "startsChunk": false,
+    "text": "Then try /prewalk.",
+  },
+]
+`;
+
+exports[`scanRegion > scans code--selected-block.html 1`] = `
+[
+  {
+    "role": "text",
+    "startsChunk": false,
+    "text": "pnpm test",
+  },
+]
+`;
+
+exports[`scanRegion > scans code--selected-inside-pre.html 1`] = `
+[
+  {
+    "role": "text",
+    "startsChunk": false,
+    "text": "pnpm test",
+  },
+]
+`;
+
+exports[`scanRegion > scans code-block--selected-pre.html 1`] = `[]`;
+
+exports[`scanRegion > scans code-blocks--article.html 1`] = `
+[
+  {
+    "role": "paragraph",
+    "startsChunk": false,
+    "text": "Run pnpm test before shipping.",
+  },
+  {
+    "role": "paragraph",
+    "startsChunk": false,
+    "text": "Review the results.",
+  },
+]
+`;
+
+exports[`scanRegion > scans inline-code--article.html 1`] = `
+[
+  {
+    "role": "heading",
+    "startsChunk": true,
+    "text": "Choosing a command",
+  },
+  {
+    "role": "paragraph",
+    "startsChunk": false,
+    "text": "Why does /plan still cheat while /prewalk doesn't?",
+  },
+  {
+    "role": "paragraph",
+    "startsChunk": false,
+    "text": "Compare /plan /prewalk before running.",
+  },
+  {
+    "role": "text",
+    "startsChunk": false,
+    "text": "Run pnpm test before shipping.",
+  },
+]
+`;
+
+exports[`scanRegion > scans prose--preformatted-article.html 1`] = `
+[
+  {
+    "role": "text",
+    "startsChunk": false,
+    "text": "Preformatted prose can carry a complete article without containing source code.",
+  },
+]
+`;
+
+exports[`scanRegion > skips hidden, editable, code, and already translated content 1`] = `
+[
+  {
+    "role": "paragraph",
+    "startsChunk": false,
+    "text": "Visible paragraph",
+  },
+]
+`;
+
+exports[`scanRegion > splits hard-break content into interleaved translation units 1`] = `
+[
+  {
+    "role": "text",
+    "startsChunk": false,
+    "text": "First paragraph.",
+  },
+  {
+    "role": "text",
+    "startsChunk": true,
+    "text": "1. First item",
+  },
+  {
+    "role": "text",
+    "startsChunk": false,
+    "text": "2. Second item",
+  },
+]
+`;
+
+exports[`scanRegion > uses a leaf container as one translation unit 1`] = `
+[
+  {
+    "role": "text",
+    "startsChunk": false,
+    "text": "Hello from a chat message",
+  },
+  {
+    "role": "text",
+    "startsChunk": false,
+    "text": "Another message",
+  },
+]
+`;

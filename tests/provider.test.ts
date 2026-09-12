@@ -38,6 +38,7 @@ describe("ProviderTranslationSession", () => {
     expect(url).toBe("https://translator.example/v1/chat/completions");
     expect((init?.headers as Record<string, string>).Authorization).toBe("Bearer test-key");
     const body = JSON.parse(String(init?.body));
+    expect(body).toMatchSnapshot();
     expect(body.model).toBe("example-model");
     expect(body.thinking).toBeUndefined();
     expect(body.response_format).toEqual({ type: "json_object" });
@@ -72,6 +73,7 @@ describe("ProviderTranslationSession", () => {
     }], new AbortController().signal);
 
     const body = JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body));
+    expect(body).toMatchSnapshot();
     const systemPrompt = body.messages[0].content as string;
     expect(systemPrompt).toContain("Use concise language for domain experts.");
     expect(systemPrompt).not.toContain("Attention in a Transformer context");
@@ -99,6 +101,7 @@ describe("ProviderTranslationSession", () => {
 
     expect(fetchMock.mock.calls[0]?.[0]).toBe("https://api.example/chat/completions");
     const body = JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body));
+    expect(body).toMatchSnapshot();
     expect(body.thinking).toEqual({ type: "disabled" });
   });
 

@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { afterEach, describe, expect, it } from "vitest";
 import { scanRegion } from "../src/content/region/scan-region";
 
@@ -7,6 +7,17 @@ afterEach(() => {
 });
 
 describe("scanRegion", () => {
+  it.each(readdirSync("tests/fixtures/region-scanning").filter(
+    (name) => name.endsWith(".html"),
+  ).sort())("scans %s", (name) => {
+    document.body.innerHTML = readFileSync(`tests/fixtures/region-scanning/${name}`, "utf8");
+    const root = document.querySelector("#selected")!;
+    const units = scanRegion(root);
+
+    expect(units.map(({ text, role, startsChunk }) => ({ text, role, startsChunk })))
+      .toMatchSnapshot();
+  });
+
   it("collects readable blocks only inside the selected root", () => {
     document.body.innerHTML = `
       <article id="selected">
@@ -19,6 +30,9 @@ describe("scanRegion", () => {
 
     const root = document.querySelector("#selected")!;
     const units = scanRegion(root);
+
+    expect(units.map(({ text, role, startsChunk }) => ({ text, role, startsChunk })))
+      .toMatchSnapshot();
 
     expect(units.map(({ element }) => element.tagName)).toEqual(["H2", "P", "LI", "LI"]);
     expect(units.map(({ id }) => id)).toEqual(["unit-0", "unit-1", "unit-2", "unit-3"]);
@@ -41,6 +55,9 @@ describe("scanRegion", () => {
 
     const units = scanRegion(document.querySelector("#chat")!);
 
+    expect(units.map(({ text, role, startsChunk }) => ({ text, role, startsChunk })))
+      .toMatchSnapshot();
+
     expect(units).toHaveLength(2);
     expect(units.every(({ element }) => element.classList.contains("message"))).toBe(true);
   });
@@ -52,6 +69,9 @@ describe("scanRegion", () => {
 
     const root = document.querySelector("#selected")!;
     const units = scanRegion(root);
+
+    expect(units.map(({ text, role, startsChunk }) => ({ text, role, startsChunk })))
+      .toMatchSnapshot();
 
     expect(units).toHaveLength(1);
     expect(units[0]).toMatchObject({
@@ -67,6 +87,9 @@ describe("scanRegion", () => {
     `;
 
     const units = scanRegion(document.querySelector("#selected")!);
+
+    expect(units.map(({ text, role, startsChunk }) => ({ text, role, startsChunk })))
+      .toMatchSnapshot();
 
     expect(units).toHaveLength(1);
     expect(units[0]?.element.tagName).toBe("P");
@@ -85,6 +108,9 @@ describe("scanRegion", () => {
     const root = document.querySelector("#selected")!;
     const units = scanRegion(root);
 
+    expect(units.map(({ text, role, startsChunk }) => ({ text, role, startsChunk })))
+      .toMatchSnapshot();
+
     expect(units.map(({ text, role }) => ({ text, role }))).toEqual([
       { text: "Why does /plan still cheat while /prewalk doesn't?", role: "paragraph" },
       { text: "Run pnpm test before shipping.", role: "text" },
@@ -100,6 +126,9 @@ describe("scanRegion", () => {
 
     const root = document.querySelector("#selected")!;
     const units = scanRegion(root);
+
+    expect(units.map(({ text, role, startsChunk }) => ({ text, role, startsChunk })))
+      .toMatchSnapshot();
 
     expect(units).toHaveLength(1);
     expect(units[0]).toMatchObject({
@@ -121,6 +150,9 @@ describe("scanRegion", () => {
     `;
 
     const units = scanRegion(document.querySelector("#selected")!);
+
+    expect(units.map(({ text, role, startsChunk }) => ({ text, role, startsChunk })))
+      .toMatchSnapshot();
 
     expect(units.map(({ text, role }) => ({ text, role }))).toEqual([
       { text: "Introductory paragraph", role: "text" },
@@ -144,6 +176,9 @@ describe("scanRegion", () => {
     const units = scanRegion(document.querySelector("#selected")!);
 
     expect(units.map(({ text, role, startsChunk }) => ({ text, role, startsChunk })))
+      .toMatchSnapshot();
+
+    expect(units.map(({ text, role, startsChunk }) => ({ text, role, startsChunk })))
       .toEqual([
         { text: "Introductory paragraph", role: "text", startsChunk: false },
         { text: "Draft section", role: "heading", startsChunk: true },
@@ -164,6 +199,9 @@ describe("scanRegion", () => {
 
     const units = scanRegion(document.querySelector("#selected")!);
 
+    expect(units.map(({ text, role, startsChunk }) => ({ text, role, startsChunk })))
+      .toMatchSnapshot();
+
     expect(units).toHaveLength(1);
     expect(units[0]?.text).toBe("Visible paragraph");
   });
@@ -174,6 +212,9 @@ describe("scanRegion", () => {
     `;
 
     const units = scanRegion(document.querySelector("#selected")!);
+
+    expect(units.map(({ text, role, startsChunk }) => ({ text, role, startsChunk })))
+      .toMatchSnapshot();
 
     expect(units).toHaveLength(1);
     expect(units[0]?.element.id).toBe("selected");
@@ -187,6 +228,9 @@ describe("scanRegion", () => {
 
     const root = document.querySelector("#selected")!;
     const units = scanRegion(root);
+
+    expect(units.map(({ text, role, startsChunk }) => ({ text, role, startsChunk })))
+      .toMatchSnapshot();
 
     expect(units).toHaveLength(1);
     expect(units[0]).toMatchObject({
@@ -228,6 +272,9 @@ describe("scanRegion", () => {
 
     const units = scanRegion(document.querySelector("#selected")!);
 
+    expect(units.map(({ text, role, startsChunk }) => ({ text, role, startsChunk })))
+      .toMatchSnapshot();
+
     expect(units).toHaveLength(1);
     expect(units[0]?.text).toBe("Readable introduction");
   });
@@ -241,6 +288,9 @@ describe("scanRegion", () => {
 
     const units = scanRegion(document.querySelector("#selected")!);
 
+    expect(units.map(({ text, role, startsChunk }) => ({ text, role, startsChunk })))
+      .toMatchSnapshot();
+
     expect(units.map(({ text }) => text)).toEqual(["Parent item", "Child item"]);
   });
 
@@ -253,6 +303,9 @@ describe("scanRegion", () => {
     `;
 
     const units = scanRegion(document.querySelector("#selected")!);
+
+    expect(units.map(({ text, role, startsChunk }) => ({ text, role, startsChunk })))
+      .toMatchSnapshot();
 
     expect(units.map(({ text }) => text)).toEqual([
       "Important introduction",
@@ -269,6 +322,9 @@ describe("scanRegion", () => {
     `;
 
     const units = scanRegion(document.querySelector("#selected")!);
+
+    expect(units.map(({ text, role, startsChunk }) => ({ text, role, startsChunk })))
+      .toMatchSnapshot();
     const breaks = document.querySelectorAll("#selected br");
 
     expect(units.map(({ text }) => text)).toEqual([
@@ -290,6 +346,9 @@ describe("scanRegion", () => {
     document.body.appendChild(root);
 
     const units = scanRegion(root);
+
+    expect(units.map(({ text, role, startsChunk }) => ({ text, role, startsChunk })))
+      .toMatchSnapshot();
 
     expect(units).toHaveLength(1);
     expect(units[0]?.text).toBe("First paragraph.\n\nSecond paragraph.");
