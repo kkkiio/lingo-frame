@@ -38,22 +38,17 @@ describe("ProviderTranslationSession", () => {
     expect(url).toBe("https://translator.example/v1/chat/completions");
     expect((init?.headers as Record<string, string>).Authorization).toBe("Bearer test-key");
     const body = JSON.parse(String(init?.body));
+    expect(body).toMatchSnapshot();
     expect(body.model).toBe("example-model");
     expect(body.thinking).toBeUndefined();
     expect(body.response_format).toEqual({ type: "json_object" });
     expect(body.messages[0].content).toContain("Japanese");
-    expect(body.messages[0].content).toContain("latest user message");
-    expect(body.messages[0].content).toContain("Earlier user and assistant messages");
-    expect(body.messages[0].content).toContain("accurate, idiomatic translation");
-    expect(body.messages[0].content).toContain("Keep proper names in their original form");
-    expect(body.messages[0].content.indexOf("<translation_instructions>"))
-      .toBeLessThan(body.messages[0].content.indexOf("Return one JSON object"));
     expect(JSON.parse(body.messages[1].content)).toEqual({
       segments: [{ role: segment.role, text: segment.text }],
     });
   });
 
-  it("replaces translation preferences without replacing the response contract", async () => {
+  it("uses custom translation instructions", async () => {
     const settings: Settings = structuredClone(DEFAULT_SETTINGS);
     settings.providers.deepseek.apiKey = "test-key";
     settings.translationInstructions = "Use concise language for domain experts.";
@@ -72,11 +67,8 @@ describe("ProviderTranslationSession", () => {
     }], new AbortController().signal);
 
     const body = JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body));
-    const systemPrompt = body.messages[0].content as string;
-    expect(systemPrompt).toContain("Use concise language for domain experts.");
-    expect(systemPrompt).not.toContain("Attention in a Transformer context");
-    expect(systemPrompt).toContain("Translation Segment in the latest user message");
-    expect(systemPrompt).toContain("Do not omit, merge, duplicate, reorder, or invent Translation Segments.");
+    expect(body).toMatchSnapshot();
+
   });
 
   it("accepts a complete endpoint URL and disables DeepSeek thinking", async () => {
@@ -99,6 +91,7 @@ describe("ProviderTranslationSession", () => {
 
     expect(fetchMock.mock.calls[0]?.[0]).toBe("https://api.example/chat/completions");
     const body = JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body));
+    expect(body).toMatchSnapshot();
     expect(body.thinking).toEqual({ type: "disabled" });
   });
 

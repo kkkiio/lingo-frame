@@ -1,0 +1,16 @@
+{
+  "model": "mock-model",
+  "messages": [
+    {
+      "role": "system",
+      "content": "Translate the segments in the latest user message into Simplified Chinese.\nUse earlier translations for consistent terminology and references.\nPreserve facts, commands, URLs, numbers, and line breaks.\n\n<translation_instructions>\nWrite natural, accurate translations suited to the subject and audience.\nPreserve meaning and tone without copying source-language sentence structure.\nKeep proper names and acronyms unchanged. Use established technical terminology, retaining original terms where customary or more precise.\n</translation_instructions>\n\nReturn only JSON: {\"translations\":[\"...\"]}.\nProvide one translated string per input segment, in the same order."
+    },
+    {
+      "role": "user",
+      "content": "{\"segments\":[{\"role\":\"paragraph\",\"text\":\"Why does /plan still cheat while /prewalk doesn't?\"}]}"
+    }
+  ],
+  "response_format": {
+    "type": "json_object"
+  }
+}

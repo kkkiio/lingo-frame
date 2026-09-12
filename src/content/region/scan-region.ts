@@ -16,11 +16,11 @@ const DIRECT_TAGS = new Set([
 const SKIP_TAGS = new Set([
   "script", "style", "noscript", "template", "iframe",
   "input", "textarea", "select", "option", "button",
-  "code", "pre", "svg", "canvas",
+  "pre", "svg", "canvas",
 ]);
 
 const INLINE_TAGS = new Set([
-  "a", "abbr", "b", "bdi", "bdo", "br", "cite", "em", "i",
+  "a", "abbr", "b", "bdi", "bdo", "br", "cite", "code", "em", "i",
   "img", "mark", "q", "small", "span", "strong", "sub", "sup",
   "time", "u", "wbr",
 ]);
@@ -57,8 +57,10 @@ export function scanRegion(root: Element): RegionTranslationUnit[] {
       }
 
       const tag = node.tagName.toLowerCase();
+      const containingPre = tag === "code" ? node.closest("pre") : null;
       if (
         SKIP_TAGS.has(tag) ||
+        (containingPre && root.contains(containingPre)) ||
         node.hidden ||
         node.getAttribute("aria-hidden") === "true" ||
         node.matches("[contenteditable=''], [contenteditable='true'], .notranslate, .sr-only") ||
@@ -69,6 +71,9 @@ export function scanRegion(root: Element): RegionTranslationUnit[] {
 
       const style = getComputedStyle(node);
       if (style.display === "none" || style.visibility === "hidden" || style.opacity === "0") {
+        return NodeFilter.FILTER_REJECT;
+      }
+      if (tag === "code" && style.display && style.display !== "contents" && !style.display.startsWith("inline")) {
         return NodeFilter.FILTER_REJECT;
       }
 
@@ -115,6 +120,7 @@ export function scanRegion(root: Element): RegionTranslationUnit[] {
     let lastTextNode: Text | null = null;
     let consecutiveBreaks = 0;
     let startsChunk = false;
+    let hasProse = false;
     const textWalker = document.createTreeWalker(
       owner,
       NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT,
@@ -125,18 +131,20 @@ export function scanRegion(root: Element): RegionTranslationUnit[] {
           if (!isText && !isBreak) {
             return NodeFilter.FILTER_SKIP;
           }
-          if (isText && !node.textContent?.trim()) {
-            return NodeFilter.FILTER_REJECT;
-          }
-
           let current: HTMLElement | null = isText ? node.parentElement : (node as HTMLElement);
           while (current) {
             const tag = current.tagName.toLowerCase();
             const style = getComputedStyle(current);
             const isSelectedPreformattedText = tag === "pre" && current === owner;
+            const containingPre = tag === "code" ? current.closest("pre") : null;
+            const isCodeBlock = tag === "code" && current !== root && (
+              (containingPre && root.contains(containingPre)) ||
+              (style.display && style.display !== "contents" && !style.display.startsWith("inline"))
+            );
             if (
               (current !== owner && ownerSet.has(current)) ||
               (SKIP_TAGS.has(tag) && !isSelectedPreformattedText) ||
+              isCodeBlock ||
               current.hidden ||
               current.getAttribute("aria-hidden") === "true" ||
               current.matches("[contenteditable=''], [contenteditable='true'], .notranslate, .sr-only") ||
@@ -162,17 +170,25 @@ export function scanRegion(root: Element): RegionTranslationUnit[] {
     while (textWalker.nextNode()) {
       const current = textWalker.currentNode;
       if (current instanceof Text) {
+        if (!current.textContent?.trim()) {
+          if (textParts.length > 0) {
+            textParts.push(current.textContent ?? "");
+          }
+          continue;
+        }
         if (textParts.length === 0 && consecutiveBreaks >= 2) {
           startsChunk = true;
         }
         textParts.push(current.textContent ?? "");
+        const code = current.parentElement?.closest("code");
+        hasProse ||= !code || !root.contains(code) || code === root;
         lastTextNode = current;
         consecutiveBreaks = 0;
         continue;
       }
 
       const text = textParts.join("").trim();
-      if (text.length >= 2 && current.parentNode) {
+      if (text.length >= 2 && hasProse && current.parentNode) {
         const startsAtHeading = heading !== null && !startedHeadings.has(heading);
         units.push({
           id: `unit-${units.length}`,
@@ -187,13 +203,14 @@ export function scanRegion(root: Element): RegionTranslationUnit[] {
         }
       }
       textParts.length = 0;
+      hasProse = false;
       lastTextNode = null;
       startsChunk = false;
       consecutiveBreaks += 1;
     }
 
     const text = textParts.join("").trim();
-    if (text.length >= 2) {
+    if (text.length >= 2 && hasProse) {
       let before: ChildNode | null = null;
       if (lastTextNode && uniqueCandidates.some((candidate) => owner.contains(candidate))) {
         let boundary: ChildNode = lastTextNode;

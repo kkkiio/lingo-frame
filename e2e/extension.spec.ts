@@ -16,6 +16,7 @@ let worker: Worker;
 let profilePath: string;
 let extensionOrigin: string;
 let providerRequests: Array<{
+  body: Record<string, unknown>;
   segments: Array<{ role: string; text: string }>;
   messages: Array<{ role: string; content: string }>;
 }> = [];
@@ -36,6 +37,7 @@ test.beforeAll(async () => {
         const payload = JSON.parse(body);
         const providerRequest = JSON.parse(payload.messages.at(-1).content);
         providerRequests.push({
+          body: payload,
           segments: providerRequest.segments,
           messages: payload.messages,
         });
@@ -50,6 +52,7 @@ test.beforeAll(async () => {
           "2. Second item": "2. 第二项",
           "First paragraph.\n\nSecond paragraph.": "第一段。\n\n第二段。",
           "Preformatted prose can carry a complete article without containing source code.": "预格式化文本也可以承载不含源代码的完整文章。",
+          "Why does /plan still cheat while /prewalk doesn't?": "为什么 /plan 仍然作弊，而 /prewalk 不会？",
         };
         if (
           providerRequest.segments.some(
@@ -232,6 +235,19 @@ test.beforeAll(async () => {
             mentionRegion.style.cssText = 'margin:40px;font:18px/1.6 Georgia,serif';
             mentionRegion.innerHTML = 'Native web search is powered by <div style="display:inline-flex"><a href="#exa">@ExaAILabs</a></div> and <div style="display:inline-grid"><a href="#partner">@SearchPartner</a></div>.';
             document.body.replaceChildren(mentionRegion);
+          }
+          if (location.pathname === '/inline-code') {
+            const article = document.createElement('article');
+            article.id = 'inline-code-region';
+            article.style.cssText = 'margin:40px;padding:24px';
+            article.innerHTML = '<p>Why does <code>/plan</code> still cheat while <code><span>/prewalk</span></code> doesn&#39;t?</p><pre><code>const example = true;</code></pre><code style="display:block">const block = true;</code><div><code>const wrapped = true;</code></div>';
+            document.body.replaceChildren(article);
+          }
+          if (location.pathname === '/selected-code') {
+            document.body.innerHTML = ${JSON.stringify(readFileSync(
+              "tests/fixtures/region-scanning/code--selected-inside-pre.html", "utf8",
+            ))};
+            document.querySelector('#selected').style.cssText = 'display:inline-block;padding:20px;margin:40px';
           }
         </script>
       </body></html>`);
@@ -459,6 +475,8 @@ test("progressively translates a ClaudeFast-style structured article", async () 
   await expect(region.locator(".lingo-frame-bilingual-content")).toHaveCount(6);
   await expect(region.locator(".lingo-frame-loading")).toHaveCount(0);
   expect(providerRequests).toHaveLength(requestCount + 2);
+  expect(JSON.stringify(providerRequests.slice(requestCount).map(({ body }) => body), null, 2) + "\n")
+    .toMatchSnapshot("multi-turn-requests.json");
 });
 
 test("translates an X-style Draft.js article through inline heading wrappers", async () => {
@@ -502,6 +520,59 @@ test("keeps inline mentions in their surrounding translation unit", async () => 
   expect(providerRequests.at(-1)?.segments).toEqual([{
     role: "text",
     text: "Native web search is powered by @ExaAILabs and @SearchPartner.",
+  }]);
+});
+
+test("translates prose containing inline commands as a complete paragraph", async () => {
+  const page = context.pages()[0]!;
+  await page.goto(`${origin}/inline-code`);
+  const region = page.locator("#inline-code-region");
+  const originalCode = await region.locator("code").evaluateAll(
+    (elements) => elements.map((element) => element.outerHTML),
+  );
+  const requestCount = providerRequests.length;
+  await activatePicker();
+
+  const box = await region.boundingBox();
+  expect(box).not.toBeNull();
+  await page.mouse.move(box!.x + 12, box!.y + 12);
+  await page.mouse.click(box!.x + 12, box!.y + 12);
+
+  const translation = region.locator("p > .lingo-frame-bilingual-content");
+  await expect(translation).toHaveText("为什么 /plan 仍然作弊，而 /prewalk 不会？");
+  await expect(region.locator(".lingo-frame-bilingual-content")).toHaveCount(1);
+  expect(providerRequests).toHaveLength(requestCount + 1);
+  expect(providerRequests.at(-1)?.segments).toEqual([{
+    role: "paragraph",
+    text: "Why does /plan still cheat while /prewalk doesn't?",
+  }]);
+  expect(JSON.stringify(providerRequests.at(-1)!.body, null, 2) + "\n")
+    .toMatchSnapshot("inline-code-request.json");
+  expect(await region.locator("code").evaluateAll(
+    (elements) => elements.map((element) => element.outerHTML),
+  )).toEqual(originalCode);
+});
+
+test("translates an explicitly selected code region inside a pre", async () => {
+  const page = context.pages()[0]!;
+  await page.goto(`${origin}/selected-code`);
+  const requestCount = providerRequests.length;
+  await activatePicker();
+
+  const region = page.locator("#selected");
+  const box = await region.boundingBox();
+  expect(box).not.toBeNull();
+  await page.mouse.move(box!.x + 12, box!.y + 12);
+  await expect(page.frameLocator("iframe[data-lingo-frame-picker]")
+    .locator(".lingo-frame-picker-highlight")).toHaveAttribute("data-candidate", "code");
+  await page.mouse.click(box!.x + 12, box!.y + 12);
+
+  await expect(region.locator(":scope > .lingo-frame-bilingual-content"))
+    .toHaveText("译文：pnpm test");
+  expect(providerRequests).toHaveLength(requestCount + 1);
+  expect(providerRequests.at(-1)?.segments).toEqual([{
+    role: "text",
+    text: "pnpm test",
   }]);
 });
 
@@ -597,11 +668,11 @@ test("loads stored provider settings in the extension options page", async () =>
   await expect(page.getByLabel("Built-in default")).toBeChecked();
 
   await page.getByText("View built-in instructions").click();
-  await expect(page.locator(".instructions-preview")).toContainText("Attention");
+  await expect(page.locator(".instructions-preview")).toContainText("Use established technical terminology");
 
   await page.getByLabel("Custom").check();
   const customInstructions = page.getByLabel("Custom translation instructions");
-  await expect(customInstructions).toHaveValue(/LLM/);
+  await expect(customInstructions).toHaveValue(/Keep proper names and acronyms unchanged/);
   await customInstructions.fill("Use concise technical language for domain experts.");
   await page.getByRole("button", { name: "Save settings" }).click();
   await expect(page.getByRole("status")).toHaveText("Settings saved");

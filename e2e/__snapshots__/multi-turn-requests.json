@@ -1,0 +1,42 @@
+[
+  {
+    "model": "mock-model",
+    "messages": [
+      {
+        "role": "system",
+        "content": "Translate the segments in the latest user message into Simplified Chinese.\nUse earlier translations for consistent terminology and references.\nPreserve facts, commands, URLs, numbers, and line breaks.\n\n<translation_instructions>\nWrite natural, accurate translations suited to the subject and audience.\nPreserve meaning and tone without copying source-language sentence structure.\nKeep proper names and acronyms unchanged. Use established technical terminology, retaining original terms where customary or more precise.\n</translation_instructions>\n\nReturn only JSON: {\"translations\":[\"...\"]}.\nProvide one translated string per input segment, in the same order."
+      },
+      {
+        "role": "user",
+        "content": "{\"segments\":[{\"role\":\"heading\",\"text\":\"Article title\"},{\"role\":\"paragraph\",\"text\":\"Translation works best when each request carries enough context to preserve the argument instead of treating every sentence as an isolated fragment. A useful first response should arrive quickly, but it should also contain enough material for someone to begin reading without immediately waiting for another network round trip. This opening section therefore explains the central idea, connects it to the reader's goal, and establishes terminology that later sections can reuse. Keeping these related sentences together gives the model a coherent passage while still leaving the rest of the article available for progressive translation.\"}]}"
+      }
+    ],
+    "response_format": {
+      "type": "json_object"
+    }
+  },
+  {
+    "model": "mock-model",
+    "messages": [
+      {
+        "role": "system",
+        "content": "Translate the segments in the latest user message into Simplified Chinese.\nUse earlier translations for consistent terminology and references.\nPreserve facts, commands, URLs, numbers, and line breaks.\n\n<translation_instructions>\nWrite natural, accurate translations suited to the subject and audience.\nPreserve meaning and tone without copying source-language sentence structure.\nKeep proper names and acronyms unchanged. Use established technical terminology, retaining original terms where customary or more precise.\n</translation_instructions>\n\nReturn only JSON: {\"translations\":[\"...\"]}.\nProvide one translated string per input segment, in the same order."
+      },
+      {
+        "role": "user",
+        "content": "{\"segments\":[{\"role\":\"heading\",\"text\":\"Article title\"},{\"role\":\"paragraph\",\"text\":\"Translation works best when each request carries enough context to preserve the argument instead of treating every sentence as an isolated fragment. A useful first response should arrive quickly, but it should also contain enough material for someone to begin reading without immediately waiting for another network round trip. This opening section therefore explains the central idea, connects it to the reader's goal, and establishes terminology that later sections can reuse. Keeping these related sentences together gives the model a coherent passage while still leaving the rest of the article available for progressive translation.\"}]}"
+      },
+      {
+        "role": "assistant",
+        "content": "{\"translations\":[\"译文：Article title\",\"译文：Translation works best when each request carries enough context to preserve the argument instead of treating every sentence as an isolated fragment. A useful first response should arrive quickly, but it should also contain enough material for someone to begin reading without immediately waiting for another network round trip. This opening section therefore explains the central idea, connects it to the reader's goal, and establishes terminology that later sections can reuse. Keeping these related sentences together gives the model a coherent passage while still leaving the rest of the article available for progressive translation.\"]}"
+      },
+      {
+        "role": "user",
+        "content": "{\"segments\":[{\"role\":\"heading\",\"text\":\"Second section\"},{\"role\":\"paragraph\",\"text\":\"Section paragraph\"},{\"role\":\"heading\",\"text\":\"Third section\"},{\"role\":\"paragraph\",\"text\":\"Closing paragraph\"}]}"
+      }
+    ],
+    "response_format": {
+      "type": "json_object"
+    }
+  }
+]

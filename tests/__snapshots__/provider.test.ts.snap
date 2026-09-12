@@ -1,0 +1,95 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`ProviderTranslationSession > accepts a complete endpoint URL and disables DeepSeek thinking 1`] = `
+{
+  "messages": [
+    {
+      "content": "Translate the segments in the latest user message into Simplified Chinese.
+Use earlier translations for consistent terminology and references.
+Preserve facts, commands, URLs, numbers, and line breaks.
+
+<translation_instructions>
+Write natural, accurate translations suited to the subject and audience.
+Preserve meaning and tone without copying source-language sentence structure.
+Keep proper names and acronyms unchanged. Use established technical terminology, retaining original terms where customary or more precise.
+</translation_instructions>
+
+Return only JSON: {"translations":["..."]}.
+Provide one translated string per input segment, in the same order.",
+      "role": "system",
+    },
+    {
+      "content": "{"segments":[{"role":"text","text":"Original"}]}",
+      "role": "user",
+    },
+  ],
+  "model": "deepseek-v4-flash",
+  "response_format": {
+    "type": "json_object",
+  },
+  "thinking": {
+    "type": "disabled",
+  },
+}
+`;
+
+exports[`ProviderTranslationSession > calls an OpenAI-compatible endpoint with the selected target language 1`] = `
+{
+  "messages": [
+    {
+      "content": "Translate the segments in the latest user message into Japanese.
+Use earlier translations for consistent terminology and references.
+Preserve facts, commands, URLs, numbers, and line breaks.
+
+<translation_instructions>
+Write natural, accurate translations suited to the subject and audience.
+Preserve meaning and tone without copying source-language sentence structure.
+Keep proper names and acronyms unchanged. Use established technical terminology, retaining original terms where customary or more precise.
+</translation_instructions>
+
+Return only JSON: {"translations":["..."]}.
+Provide one translated string per input segment, in the same order.",
+      "role": "system",
+    },
+    {
+      "content": "{"segments":[{"role":"paragraph","text":"Original text"}]}",
+      "role": "user",
+    },
+  ],
+  "model": "example-model",
+  "response_format": {
+    "type": "json_object",
+  },
+}
+`;
+
+exports[`ProviderTranslationSession > uses custom translation instructions 1`] = `
+{
+  "messages": [
+    {
+      "content": "Translate the segments in the latest user message into Simplified Chinese.
+Use earlier translations for consistent terminology and references.
+Preserve facts, commands, URLs, numbers, and line breaks.
+
+<translation_instructions>
+Use concise language for domain experts.
+</translation_instructions>
+
+Return only JSON: {"translations":["..."]}.
+Provide one translated string per input segment, in the same order.",
+      "role": "system",
+    },
+    {
+      "content": "{"segments":[{"role":"text","text":"Original"}]}",
+      "role": "user",
+    },
+  ],
+  "model": "deepseek-v4-flash",
+  "response_format": {
+    "type": "json_object",
+  },
+  "thinking": {
+    "type": "disabled",
+  },
+}
+`;
