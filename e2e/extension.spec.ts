@@ -668,11 +668,11 @@ test("loads stored provider settings in the extension options page", async () =>
   await expect(page.getByLabel("Built-in default")).toBeChecked();
 
   await page.getByText("View built-in instructions").click();
-  await expect(page.locator(".instructions-preview")).toContainText("Attention");
+  await expect(page.locator(".instructions-preview")).toContainText("Use established technical terminology");
 
   await page.getByLabel("Custom").check();
   const customInstructions = page.getByLabel("Custom translation instructions");
-  await expect(customInstructions).toHaveValue(/LLM/);
+  await expect(customInstructions).toHaveValue(/Keep proper names and acronyms unchanged/);
   await customInstructions.fill("Use concise technical language for domain experts.");
   await page.getByRole("button", { name: "Save settings" }).click();
   await expect(page.getByRole("status")).toHaveText("Settings saved");
