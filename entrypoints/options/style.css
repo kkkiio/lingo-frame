@@ -1,7 +1,13 @@
 :root {
   color: #171717;
   background: #f5f5f4;
-  font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family:
+    Inter,
+    ui-sans-serif,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
   font-synthesis: none;
 }
 
@@ -28,10 +34,20 @@ textarea {
 }
 
 .hero {
-  display: flex;
+  display: grid;
+  grid-template-columns: 64px 1fr auto;
   align-items: center;
-  gap: 20px;
+  column-gap: 20px;
   margin-bottom: 28px;
+}
+
+.hero > .mark {
+  grid-row: 1 / 4;
+}
+
+.hero h1,
+.hero-subtitle {
+  grid-column: 2 / -1;
 }
 
 .mark {
@@ -128,7 +144,9 @@ textarea {
   outline: none;
   background: #fafaf9;
   color: #1c1917;
-  transition: border-color 120ms ease, box-shadow 120ms ease;
+  transition:
+    border-color 120ms ease,
+    box-shadow 120ms ease;
 }
 
 textarea {
@@ -356,4 +374,161 @@ small {
   .card {
     padding: 21px;
   }
+}
+
+fieldset {
+  display: grid;
+  gap: 22px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.interface-language-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-self: end;
+  gap: 6px;
+  padding: 5px 0 5px 7px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #57534e;
+  font-size: 12px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.interface-language-trigger:hover,
+.interface-language-trigger[data-state="open"] {
+  color: #171717;
+}
+.interface-language-trigger:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
+.interface-language-trigger svg,
+.interface-language-option svg {
+  display: block;
+  width: 16px;
+  height: 16px;
+}
+.interface-language-trigger .language-chevron {
+  width: 12px;
+  height: 12px;
+}
+.interface-language-trigger[data-state="open"] .language-chevron {
+  transform: rotate(180deg);
+}
+.interface-language-menu {
+  z-index: 20;
+  min-width: 168px;
+  max-height: var(--reka-select-content-available-height);
+  overflow: auto;
+  padding: 5px;
+  border: 1px solid #e7e5e4;
+  border-radius: 10px;
+  background: #fafaf9;
+  box-shadow: 0 8px 24px #1c191714;
+}
+.interface-language-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 9px 10px;
+  border-radius: 5px;
+  color: #292524;
+  font-size: 13px;
+  cursor: pointer;
+  user-select: none;
+}
+.interface-language-option[data-highlighted] {
+  background: #e7e5e4;
+  outline: none;
+}
+
+@media (max-width: 700px) {
+  .hero {
+    grid-template-columns: 1fr auto;
+    row-gap: 8px;
+  }
+  .hero > .mark {
+    grid-row: 1;
+  }
+  .hero > .eyebrow {
+    grid-row: 2;
+    grid-column: 1 / -1;
+    margin-top: 8px;
+  }
+  .interface-language-trigger {
+    grid-row: 1;
+    grid-column: 2;
+    align-self: center;
+  }
+  .hero h1,
+  .hero-subtitle {
+    grid-column: 1 / -1;
+  }
+}
+.language-field {
+  display: grid;
+  gap: 8px;
+}
+.language-field > label {
+  font-size: 13px;
+  font-weight: 700;
+}
+.language-anchor {
+  display: flex;
+}
+.language-anchor input {
+  border-radius: 10px 0 0 10px;
+}
+.language-anchor button {
+  min-width: 44px;
+  border: 1px solid #d6d3d1;
+  border-left: 0;
+  border-radius: 0 10px 10px 0;
+  background: #fafaf9;
+  cursor: pointer;
+}
+.language-menu {
+  z-index: 10;
+  width: var(--reka-combobox-trigger-width);
+  max-height: min(320px, var(--reka-combobox-content-available-height));
+  overflow: auto;
+  border: 1px solid #d6d3d1;
+  border-radius: 10px;
+  padding: 5px;
+  background: white;
+  box-shadow: 0 10px 30px #1c19171a;
+}
+.language-option {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+}
+.language-option[data-highlighted] {
+  background: #eef2ff;
+  outline: none;
+}
+.language-option[data-state="checked"] {
+  color: #4338ca;
+}
+.field-error {
+  color: #b91c1c;
+}
+[aria-invalid="true"] {
+  border-color: #dc2626;
+}
+.notice {
+  margin-top: 16px;
+}
+button:focus-visible {
+  outline: 2px solid #6366f1;
+  outline-offset: 3px;
 }

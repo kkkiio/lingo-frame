@@ -1,5 +1,6 @@
 import { browser } from "wxt/browser";
 import { z } from "zod";
+import { TARGET_LANGUAGES } from "./languages";
 
 export const providerIdSchema = z.enum(["deepseek", "openai-compatible"]);
 
@@ -15,10 +16,39 @@ export const providerSettingsSchema = z.object({
   model: z.string().min(1),
 });
 
+export const targetLanguageSchema = z.preprocess(
+  (value) => {
+    if (typeof value !== "string") return value;
+    const language = TARGET_LANGUAGES.find(({ english }) => english === value.trim());
+    return language ? { kind: "preset", code: language.code } : { kind: "custom", name: value };
+  },
+  z.discriminatedUnion("kind", [
+    z.object({ kind: z.literal("preset"), code: z.enum(TARGET_LANGUAGES.map(({ code }) => code)) }),
+    z.object({ kind: z.literal("custom"), name: z.string().trim().min(1) }),
+  ]),
+);
+
+export const translationInstructionsSchema = z.preprocess(
+  (value) => {
+    if (value == null) return { mode: "default", customText: "" };
+    if (typeof value === "string") return { mode: "custom", customText: value };
+    return value;
+  },
+  z
+    .object({
+      mode: z.enum(["default", "custom"]),
+      customText: z.string(),
+    })
+    .refine(({ mode, customText }) => mode === "default" || customText.trim().length > 0, {
+      path: ["customText"],
+      message: "Enter translation instructions",
+    }),
+);
+
 export const settingsSchema = z.object({
   provider: providerIdSchema,
-  targetLanguage: z.string().min(1),
-  translationInstructions: z.string().trim().min(1).nullable().default(null),
+  targetLanguage: targetLanguageSchema,
+  translationInstructions: translationInstructionsSchema,
   providers: z.object({
     deepseek: providerSettingsSchema,
     "openai-compatible": providerSettingsSchema,
@@ -31,8 +61,8 @@ export type Settings = z.infer<typeof settingsSchema>;
 
 export const DEFAULT_SETTINGS: Settings = {
   provider: "deepseek",
-  targetLanguage: "Simplified Chinese",
-  translationInstructions: null,
+  targetLanguage: { kind: "preset", code: "zh-Hans" },
+  translationInstructions: { mode: "default", customText: "" },
   providers: {
     deepseek: {
       apiKey: "",
@@ -54,9 +84,15 @@ export async function readSettings(): Promise<Settings> {
   const parsed = settingsSchema.safeParse(stored[SETTINGS_KEY]);
 
   if (parsed.success) {
+    if (JSON.stringify(stored[SETTINGS_KEY]) !== JSON.stringify(parsed.data)) {
+      await browser.storage.local.set({ [SETTINGS_KEY]: parsed.data });
+    }
     return parsed.data;
   }
 
+  if (stored[SETTINGS_KEY] !== undefined) {
+    throw new Error("Stored settings could not be read");
+  }
   await browser.storage.local.set({ [SETTINGS_KEY]: DEFAULT_SETTINGS });
   return structuredClone(DEFAULT_SETTINGS);
 }

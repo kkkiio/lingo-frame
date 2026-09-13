@@ -6,6 +6,9 @@
  */
 
 import { browser } from "wxt/browser";
+import { serializeTranslationUnit, renderTranslationMarkdown } from "./markdown";
+import { i18n, uiMessages } from "../../shared/i18n";
+import type { TranslationFailure } from "../../shared/errors";
 import {
   TRANSLATION_SESSION_PORT,
   type TranslationChunk,
@@ -29,6 +32,7 @@ interface TaskSegment {
   id: string;
   separatorBefore: string;
   translatedText: string | null;
+  links: Map<string, string>;
 }
 
 interface TranslationTask {
@@ -46,6 +50,7 @@ export class RegionTranslationSession {
   private resolveRun: (() => void) | null = null;
   private cancelled = false;
   private settled = false;
+  private failure: TranslationFailure | null = null;
 
   constructor(units: RegionTranslationUnit[]) {
     this.tasks = units.map((unit) => ({
@@ -58,18 +63,18 @@ export class RegionTranslationSession {
     let currentSegments: TranslationSegment[] = [];
     let currentEstimatedTokens = 0;
     const textEncoder = new TextEncoder();
+    const linkIds = new Map<HTMLElement, string>();
     for (const task of this.tasks) {
-      const parts = task.unit.text.split(/(\r?\n[^\S\r\n]*\r?\n+)/);
+      const parts = serializeTranslationUnit(task.unit, linkIds);
       let segmentIndex = 0;
-      for (let partIndex = 0; partIndex < parts.length; partIndex += 2) {
-        const text = parts[partIndex]?.trim() ?? "";
+      for (const part of parts) {
+        const text = part.markdown;
         if (!text) {
           continue;
         }
 
-        const prefersBreakBefore = segmentIndex > 0 || (
-          segmentIndex === 0 && task.unit.startsChunk
-        );
+        const prefersBreakBefore =
+          segmentIndex > 0 || (segmentIndex === 0 && task.unit.startsChunk);
         const estimatedTokens = Math.max(
           1,
           Math.ceil(textEncoder.encode(text).byteLength / UTF8_BYTES_PER_ESTIMATED_TOKEN),
@@ -85,20 +90,21 @@ export class RegionTranslationSession {
           ? FIRST_CHUNK_MAX_ESTIMATED_TOKENS
           : NEXT_CHUNK_MAX_ESTIMATED_TOKENS;
         const hasCurrentSegments = currentSegments.length > 0;
-        const reachedPreferredBoundary = prefersBreakBefore &&
-          currentEstimatedTokens >= minimumTokens;
+        const reachedPreferredBoundary =
+          prefersBreakBefore && currentEstimatedTokens >= minimumTokens;
         const reachedTarget = currentEstimatedTokens >= targetTokens;
         const wouldExceedSoftMaximum = currentEstimatedTokens + estimatedTokens > maximumTokens;
-        const wouldExceedHardMaximum = currentEstimatedTokens + estimatedTokens >
-          HARD_MAX_ESTIMATED_TOKENS;
+        const wouldExceedHardMaximum =
+          currentEstimatedTokens + estimatedTokens > HARD_MAX_ESTIMATED_TOKENS;
         const reachedSegmentLimit = currentSegments.length >= MAX_SEGMENTS_PER_CHUNK;
-        if (hasCurrentSegments && (
-          reachedPreferredBoundary ||
-          reachedTarget ||
-          wouldExceedSoftMaximum ||
-          wouldExceedHardMaximum ||
-          reachedSegmentLimit
-        )) {
+        if (
+          hasCurrentSegments &&
+          (reachedPreferredBoundary ||
+            reachedTarget ||
+            wouldExceedSoftMaximum ||
+            wouldExceedHardMaximum ||
+            reachedSegmentLimit)
+        ) {
           chunks.push({ id: `chunk-${chunks.length}`, segments: currentSegments });
           currentSegments = [];
           currentEstimatedTokens = 0;
@@ -113,7 +119,8 @@ export class RegionTranslationSession {
         };
         task.segments.push({
           id,
-          separatorBefore: segmentIndex === 0 ? "" : parts[partIndex - 1] ?? "\n\n",
+          separatorBefore: part.separatorBefore,
+          links: part.links,
           translatedText: null,
         });
         this.tasksBySegmentId.set(id, task);
@@ -151,7 +158,7 @@ export class RegionTranslationSession {
       });
       port.onDisconnect.addListener(() => {
         if (!this.cancelled && !this.settled) {
-          this.renderSessionFailure("Translation connection closed before completion");
+          this.renderSessionFailure({ code: "connectionClosed" });
         }
         this.finishRun(false);
       });
@@ -197,7 +204,7 @@ export class RegionTranslationSession {
         const task = this.tasksBySegmentId.get(translation.id);
         const segment = task?.segments.find(({ id }) => id === translation.id);
         if (!task || !segment || segment.translatedText !== null || !translation.text.trim()) {
-          this.renderSessionFailure("Translation response contained an invalid Segment ID");
+          this.renderSessionFailure({ code: "invalidResponse" });
           this.finishRun(true);
           return;
         }
@@ -218,7 +225,7 @@ export class RegionTranslationSession {
 
     for (const task of this.tasks) {
       if (task.segments.some(({ translatedText }) => translatedText === null)) {
-        this.renderSessionFailure("Translation response omitted part of this Region");
+        this.renderSessionFailure({ code: "invalidResponse" });
         this.finishRun(true);
         return;
       }
@@ -227,17 +234,25 @@ export class RegionTranslationSession {
   }
 
   private renderTaskProgress(task: TranslationTask): void {
-    const translatedSegments = task.segments.filter(({ translatedText }) => translatedText !== null);
-    const isComplete = translatedSegments.length === task.segments.length && task.segments.length > 0;
+    const translatedSegments = task.segments.filter(
+      ({ translatedText }) => translatedText !== null,
+    );
+    const isComplete =
+      translatedSegments.length === task.segments.length && task.segments.length > 0;
     task.slot.replaceChildren();
 
     if (translatedSegments.length > 0) {
-      const text = task.segments
-        .filter(({ translatedText }) => translatedText !== null)
-        .map(({ separatorBefore, translatedText }) => `${separatorBefore}${translatedText}`)
-        .join("");
       task.slot.classList.add("lingo-frame-bilingual-content");
-      task.slot.append(document.createTextNode(text));
+      for (const segment of translatedSegments) {
+        task.slot.append(document.createTextNode(segment.separatorBefore));
+        task.slot.append(
+          renderTranslationMarkdown(
+            segment.translatedText!,
+            segment.links,
+            !task.slot.closest("a"),
+          ),
+        );
+      }
       task.unit.element.classList.add("lingo-frame-bilingual");
     } else {
       task.slot.classList.remove("lingo-frame-bilingual-content");
@@ -247,35 +262,57 @@ export class RegionTranslationSession {
       const loading = document.createElement("span");
       loading.className = "lingo-frame-loading";
       loading.setAttribute("data-lingo-frame-ui", "");
-      loading.setAttribute("aria-label", "Translating");
+      loading.setAttribute("aria-label", i18n._(uiMessages.translating));
       task.slot.appendChild(loading);
       return;
     }
 
     const elementTasks = this.tasks.filter(({ unit }) => unit.element === task.unit.element);
-    if (elementTasks.every((elementTask) => (
-      elementTask.segments.every(({ translatedText }) => translatedText !== null)
-    ))) {
+    if (
+      elementTasks.every((elementTask) =>
+        elementTask.segments.every(({ translatedText }) => translatedText !== null),
+      )
+    ) {
       task.unit.element.setAttribute("data-lingo-frame-translated", "true");
     }
   }
 
-  private renderSessionFailure(message: string): void {
+  private renderSessionFailure(failureInfo: TranslationFailure): void {
+    this.failure = failureInfo;
     for (const task of this.tasks) {
       const isComplete = task.segments.every(({ translatedText }) => translatedText !== null);
       if (isComplete) {
         continue;
       }
 
-      task.slot.querySelectorAll(".lingo-frame-loading, .lingo-frame-failure")
+      task.slot
+        .querySelectorAll(".lingo-frame-loading, .lingo-frame-failure")
         .forEach((node) => node.remove());
       const failure = document.createElement("span");
       failure.className = "lingo-frame-failure";
       failure.setAttribute("data-lingo-frame-ui", "");
       const text = document.createElement("span");
-      text.textContent = message;
+      text.textContent = i18n._(uiMessages[failureInfo.code].id, {
+        status: failureInfo.status ?? "",
+      });
       failure.appendChild(text);
       task.slot.appendChild(failure);
+    }
+  }
+
+  updateLocale(): void {
+    for (const task of this.tasks) {
+      task.slot.querySelectorAll(".lingo-frame-loading").forEach((loading) => {
+        loading.setAttribute("aria-label", i18n._(uiMessages.translating));
+      });
+      if (this.failure) {
+        const failureText = task.slot.querySelector(".lingo-frame-failure > span");
+        if (failureText) {
+          failureText.textContent = i18n._(uiMessages[this.failure.code].id, {
+            status: this.failure.status ?? "",
+          });
+        }
+      }
     }
   }
 

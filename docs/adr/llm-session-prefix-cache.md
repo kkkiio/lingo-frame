@@ -42,7 +42,7 @@ Provider 只需按输入顺序返回等长的字符串数组：
 }
 ```
 
-Segment ID 只存在于 content/background 的本地消息协议。background 校验译文数组与当前输入等长且没有空译文，再按数组位置绑定内部 Segment ID；LLM 不复制或生成 ID。页面按内部 ID 写入已经存在的 Translation Slot，只使用 `textContent`，不解析 Provider 生成的 HTML。DOM 节点、插槽、页面属性、内部 ID 和 API Key 都不进入 LLM messages。
+Segment ID 只存在于 content/background 的本地消息协议。background 校验译文数组与当前输入等长且没有空译文，再按数组位置绑定内部 Segment ID；LLM 不复制或生成 ID。页面按内部 ID 写入已经存在的 Translation Slot。Segment 的文本内容使用受限的 inline Markdown；content 使用 markdown-it 解析并创建文本、强调、行内代码、链接和换行节点，原始 HTML 不参与 DOM 构造。DOM 节点、插槽、页面属性、内部 Segment ID 和 API Key 都不进入 LLM messages。链接目的地使用 Session 内稳定的 `lf-link:N` 引用；地址映射仅保留在 content，并限定到对应 Segment。
 
 ## 多轮上下文与 Prefix Cache
 
@@ -91,4 +91,12 @@ Translation Session 在网络请求前创建全部 Translation Slot。每个 Chu
 
 ### 让 Provider 返回 HTML
 
-HTML round-trip 会把 DOM 完整性和安全性委托给模型输出。LingoFrame 保留本地 Translation Slot，只接受按稳定 ID 对齐的纯文本译文。
+HTML round-trip 会把 DOM 完整性和安全性委托给模型输出。LingoFrame 保留本地 Translation Slot，接收按内部 ID 对齐的 Markdown 译文。Markdown 仅表达块内文本语义，原页面负责标题、列表和表格的外层结构。模型返回的链接只按本地白名单恢复，输出不携带可执行 HTML 或任意 DOM 属性。
+
+## Markdown 语义保留
+
+scanner 记录所选根节点内已接受文本节点的行内祖先，按原始文本空行确定 Segment 后，再用 Turndown 序列化筛选后的 DOM 片段。每个 Segment 的格式独立闭合；不会通过对 Markdown 字符串再次切片产生不完整的标记。被过滤的隐藏内容、代码块和其他 Unit 不参与转换。
+
+原文显示保持原样。每轮完成后按 Segment 解析译文，按原分隔符组合回同一个 Slot。译文继承所在语义块的字重，局部 strong、em、code 和链接提供对应样式。
+
+以 `pnpm test:live` 的相同模型、相同提示和相同分段，对比纯文本、包含原 URL 的 Markdown、包含本地链接编号的 Markdown。结果写入 `test-results/markdown-comparison.json`，包含译文、耗时和 API token 用量。格式与链接完整性可自动校验，语义准确性需要阅读样本；单次运行不能证明整体质量或性能提升。

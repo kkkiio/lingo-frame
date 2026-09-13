@@ -25,7 +25,7 @@ html.lingo-frame-is-picking * {
   margin: 8px 0 !important;
   background: transparent;
   color: inherit;
-  font-weight: bold;
+  font-weight: inherit;
   overflow-wrap: break-word;
   white-space: pre-wrap;
   word-break: break-word;
@@ -56,7 +56,12 @@ html.lingo-frame-is-picking * {
   border-radius: 6px;
   background: #fef2f2;
   color: #991b1b;
-  font: 500 12px/1.4 ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font:
+    500 12px/1.4 ui-sans-serif,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
 }
 
 .lingo-frame-toast {
@@ -71,7 +76,12 @@ html.lingo-frame-is-picking * {
   background: #171717;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.26);
   color: #fff;
-  font: 600 13px/1 ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font:
+    600 13px/1 ui-sans-serif,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
 }
 
 @keyframes lingo-frame-spin {
@@ -86,4 +96,24 @@ html.lingo-frame-is-picking * {
     background: #450a0a;
     color: #fecaca;
   }
+}
+
+.lingo-frame-bilingual-content strong {
+  font-weight: bolder;
+}
+.lingo-frame-bilingual-content em {
+  font-style: italic;
+}
+.lingo-frame-bilingual-content code {
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 0.9em;
+  padding: 0.08em 0.25em;
+  border-radius: 3px;
+  background: rgba(127, 127, 127, 0.12);
+  white-space: pre-wrap;
+}
+.lingo-frame-bilingual-content a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
 }

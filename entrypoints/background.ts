@@ -1,3 +1,6 @@
+import { i18n, uiMessages } from "../src/shared/i18n";
+import { TranslationError } from "../src/shared/errors";
+import { readUiPreferences, UI_LOCALE_PORT } from "../src/shared/ui-preferences";
 import { browser } from "wxt/browser";
 import {
   TRANSLATION_SESSION_PORT,
@@ -6,14 +9,28 @@ import {
   type TranslationSessionCommand,
   type TranslationSessionEvent,
 } from "../src/shared/messages";
-import {
-  getActiveProviderSettings,
-  readSettings,
-  settingsSchema,
-} from "../src/shared/settings";
+import { getActiveProviderSettings, readSettings, settingsSchema } from "../src/shared/settings";
 import { ProviderTranslationSession } from "../src/translation/provider";
 
 export default defineBackground(() => {
+  const updateLocale = async () => {
+    const ui = await readUiPreferences();
+    i18n.activate(ui.locale);
+    await browser.action.setTitle({ title: i18n._(uiMessages.actionTitle) });
+    const tabs = await browser.tabs.query({});
+    await Promise.allSettled(
+      tabs
+        .filter((tab) => tab.id !== undefined)
+        .map(async (tab) => {
+          await browser.action.setTitle({ tabId: tab.id!, title: i18n._(uiMessages.actionTitle) });
+          await browser.tabs.sendMessage(tab.id!, { type: "UI_LOCALE_CHANGED", locale: ui.locale });
+        }),
+    );
+  };
+  void updateLocale();
+  browser.storage.onChanged.addListener((changes, area) => {
+    if (area === "local" && changes.uiPreferences) void updateLocale();
+  });
   void browser.storage.local.setAccessLevel({ accessLevel: "TRUSTED_CONTEXTS" });
 
   browser.action.onClicked.addListener(async (tab) => {
@@ -35,23 +52,34 @@ export default defineBackground(() => {
       await browser.action.setBadgeText({ tabId: tab.id, text: "" });
       await browser.action.setTitle({
         tabId: tab.id,
-        title: "Select a region to translate",
+        title: i18n._(uiMessages.actionTitle),
       });
-    } catch (error) {
-      console.warn("LingoFrame cannot run on this page", error);
+    } catch {
       await browser.action.setBadgeBackgroundColor({ tabId: tab.id, color: "#dc2626" });
       await browser.action.setBadgeText({ tabId: tab.id, text: "!" });
       await browser.action.setTitle({
         tabId: tab.id,
-        title: "LingoFrame cannot access this page",
+        title: i18n._(uiMessages.pageUnavailable),
       });
     }
   });
 
-  browser.runtime.onMessage.addListener((message: unknown) => {
+  browser.runtime.onMessage.addListener((message: unknown, sender) => {
+    if (sender.id !== browser.runtime.id || sender.url !== browser.runtime.getURL("/options.html"))
+      return;
     return handleRuntimeMessage(message as RuntimeMessage);
   });
   browser.runtime.onConnect.addListener((port) => {
+    if (port.name === UI_LOCALE_PORT && port.sender?.id === browser.runtime.id) {
+      let connected = true;
+      port.onDisconnect.addListener(() => {
+        connected = false;
+      });
+      void readUiPreferences().then((ui) => {
+        if (connected) port.postMessage(ui);
+      });
+      return;
+    }
     if (port.name === TRANSLATION_SESSION_PORT) {
       handleTranslationPort(port);
     }
@@ -62,37 +90,40 @@ async function handleRuntimeMessage(
   message: RuntimeMessage,
 ): Promise<TranslationResponse | { ok: true }> {
   if (message.type === "TEST_PROVIDER") {
-    const settings = settingsSchema.parse(message.settings);
+    const parsedSettings = settingsSchema.safeParse(message.settings);
+    if (!parsedSettings.success) return { ok: false, error: { code: "settingsError" } };
+    const settings = parsedSettings.data;
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 30_000);
 
     try {
       const session = new ProviderTranslationSession(settings);
-      await session.translateChunk([{
-        id: "connection-test:segment-0",
-        unitId: "connection-test",
-        role: "paragraph",
-        text: "Hello",
-      }], controller.signal);
+      await session.translateChunk(
+        [
+          {
+            id: "connection-test:segment-0",
+            unitId: "connection-test",
+            role: "paragraph",
+            text: "Hello",
+          },
+        ],
+        controller.signal,
+      );
       return { ok: true };
     } catch (error) {
       return {
         ok: false,
-        error: controller.signal.aborted
-          ? "Provider test timed out"
-          : error instanceof Error ? error.message : "Provider test failed",
+        error: controller.signal.aborted ? { code: "timeout" } : TranslationError.describe(error),
       };
     } finally {
       clearTimeout(timer);
     }
   }
 
-  return { ok: false, error: "Unknown LingoFrame message" };
+  return { ok: false, error: { code: "unknownError" } };
 }
 
-function handleTranslationPort(
-  port: ReturnType<typeof browser.runtime.connect>,
-): void {
+function handleTranslationPort(port: ReturnType<typeof browser.runtime.connect>): void {
   let currentController: AbortController | null = null;
   let activeSessionId: string | null = null;
   let cancelled = false;
@@ -108,10 +139,7 @@ function handleTranslationPort(
 
   port.onMessage.addListener((message: unknown) => {
     const command = message as TranslationSessionCommand;
-    if (
-      command.type === "CANCEL_TRANSLATION_SESSION" &&
-      command.sessionId === activeSessionId
-    ) {
+    if (command.type === "CANCEL_TRANSLATION_SESSION" && command.sessionId === activeSessionId) {
       cancelled = true;
       currentController?.abort();
       currentController = null;
@@ -133,7 +161,7 @@ function handleTranslationPort(
           command.chunks.some((chunk) => !chunk.id.trim() || chunk.segments.length === 0) ||
           segments.length !== segmentIds.size
         ) {
-          throw new Error("Translation Session contains invalid chunks");
+          throw new TranslationError({ code: "invalidSession" });
         }
 
         const settings = await readSettings();
@@ -167,7 +195,7 @@ function handleTranslationPort(
             port.postMessage(event);
           } catch (error) {
             if (timedOut) {
-              throw new Error("Translation request timed out");
+              throw new TranslationError({ code: "timeout" });
             }
             throw error;
           } finally {
@@ -190,7 +218,7 @@ function handleTranslationPort(
           const event: TranslationSessionEvent = {
             type: "TRANSLATION_SESSION_FAILED",
             sessionId: command.sessionId,
-            error: error instanceof Error ? error.message : "Translation failed",
+            error: TranslationError.describe(error),
           };
           port.postMessage(event);
         }

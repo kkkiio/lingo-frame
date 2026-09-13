@@ -1,3 +1,6 @@
+import { browser } from "wxt/browser";
+import { i18n, uiMessages } from "../src/shared/i18n";
+import { UI_LOCALE_PORT, uiLocaleSchema } from "../src/shared/ui-preferences";
 import pickerCss from "../src/content/picker/picker.css?inline";
 import translationCss from "../src/content/region/translation.css?inline";
 import { RegionPicker } from "../src/content/picker/region-picker";
@@ -8,7 +11,38 @@ class LingoFrameController {
   private picker: RegionPicker | null = null;
   private session: RegionTranslationSession | null = null;
 
+  private readonly localeReady: Promise<void>;
+
+  constructor() {
+    i18n.on("change", () => {
+      this.session?.updateLocale();
+      for (const toast of document.querySelectorAll<HTMLElement>("[data-lingo-frame-toast]")) {
+        toast.textContent = i18n._(uiMessages.noText);
+      }
+    });
+    browser.runtime.onMessage.addListener((message: unknown) => {
+      const update = message as { type?: unknown; locale?: unknown };
+      const locale = uiLocaleSchema.safeParse(update?.locale);
+      if (update?.type === "UI_LOCALE_CHANGED" && locale.success) {
+        i18n.activate(locale.data);
+      }
+    });
+    this.localeReady = new Promise((resolve) => {
+      const port = browser.runtime.connect({ name: UI_LOCALE_PORT });
+      port.onMessage.addListener((message: unknown) => {
+        const locale = uiLocaleSchema.safeParse((message as { locale?: unknown })?.locale);
+        if (locale.success) {
+          i18n.activate(locale.data);
+        }
+        resolve();
+        port.disconnect();
+      });
+      port.onDisconnect.addListener(() => resolve());
+    });
+  }
+
   async start(): Promise<void> {
+    await this.localeReady;
     this.picker?.cancel();
     this.session?.cancel();
     this.session = null;
@@ -33,7 +67,7 @@ class LingoFrameController {
 
     const units = scanRegion(selectedRegion);
     if (units.length === 0) {
-      this.showMessage("No readable text found in this region");
+      this.showMessage(i18n._(uiMessages.noText));
       return;
     }
 
@@ -61,6 +95,7 @@ class LingoFrameController {
   private showMessage(message: string): void {
     const toast = document.createElement("div");
     toast.className = "lingo-frame-toast";
+    toast.setAttribute("data-lingo-frame-toast", "");
     toast.setAttribute("data-lingo-frame-ui", "");
     toast.textContent = message;
     document.documentElement.appendChild(toast);

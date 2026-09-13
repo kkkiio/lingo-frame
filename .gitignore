@@ -9,3 +9,6 @@ test-results/
 .env
 .env.*
 !.env.example
+
+# Lingui catalogs are compiled from PO during builds.
+src/locales/*/messages.js

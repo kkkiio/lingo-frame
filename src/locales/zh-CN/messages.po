@@ -1,0 +1,303 @@
+msgid ""
+msgstr ""
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Language: zh-CN\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+"Project-Id-Version: \n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: \n"
+"PO-Revision-Date: \n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"Content-Transfer-Encoding: \n"
+
+#. js-lingui-explicit-id
+#: src/shared/i18n.ts:115
+msgid "permissionDenied"
+msgstr "请允许访问此 API 地址，以使用该翻译服务。"
+
+#. js-lingui-explicit-id
+#: src/shared/i18n.ts:57
+msgid "baseUrl"
+msgstr "API 地址"
+
+#. js-lingui-explicit-id
+#: src/shared/i18n.ts:60
+msgid "apiKey"
+msgstr "API 密钥"
+
+#. js-lingui-explicit-id
+#: src/shared/i18n.ts:34
+msgid "defaultMode"
+msgstr "内置默认"
+
+#. js-lingui-explicit-id
+#: src/shared/i18n.ts:26
+msgid "chooseLanguage"
+msgstr "选择或搜索语言"
+
+#. js-lingui-explicit-id
+#: src/shared/i18n.ts:51
+msgid "providerSubtitle"
+msgstr "选择翻译使用的服务和模型。"
+
+#. js-lingui-explicit-id
+#: src/shared/i18n.ts:21
+msgid "behaviorSubtitle"
+msgstr "选择目标语言与翻译风格。"
+
+#. js-lingui-explicit-id
+#: src/shared/i18n.ts:13
+msgid "settingsSubtitle"
+msgstr "选择翻译服务和目标语言。"
+
+#. js-lingui-explicit-id
+#: src/shared/i18n.ts:125
+msgid "pickerHint"
+msgstr "点击区域开始翻译 · Esc 取消"
+
+#. js-lingui-explicit-id
+#: src/shared/i18n.ts:72
+msgid "tested"
+msgstr "配置测试成功，设置尚未保存。"
+
+#. js-lingui-explicit-id
+#: src/shared/i18n.ts:119
+msgid "settingsError"
+msgstr "无法加载或保存设置，请重试。"
+
+#. js-lingui-explicit-id
+#: src/shared/i18n.ts:103
+msgid "networkError"
+msgstr "无法连接翻译服务，请检查 API 地址和网络连接。"
+
+#. js-lingui-explicit-id
+#: src/shared/i18n.ts:39
+msgid "customMode"
+msgstr "自定义"
+
+#. js-lingui-explicit-id
+#: src/shared/i18n.ts:45
+msgid "customInstructions"
+msgstr "自定义翻译指令"
+
+#. js-lingui-explicit-id
+#: src/shared/i18n.ts:80
+msgid "required"
+msgstr "请填写此项。"
+
+#. js-lingui-explicit-id
+#: src/shared/i18n.ts:85
+msgid "missingApiKey"
+msgstr "请在 LingoFrame 设置中填写 API 密钥。"
+
+#. js-lingui-explicit-id
+#: src/shared/i18n.ts:81
+msgid "invalidUrl"
+msgstr "请输入 HTTPS API 地址，或本机回环 HTTP 地址。"
+
+#. js-lingui-explicit-id
+#: src/shared/i18n.ts:18
+msgid "followBrowser"
+msgstr "跟随浏览器"
+
+#. js-lingui-explicit-id
+#: src/shared/i18n.ts:66
+msgid "hideKey"
+msgstr "隐藏"
+
+#. js-lingui-explicit-id
+#: src/shared/i18n.ts:17
+msgid "interfaceLanguage"
+msgstr "界面语言"
+
+#. js-lingui-explicit-id
+#: src/shared/i18n.ts:129
+msgid "pageUnavailable"
+msgstr "LingoFrame 无法访问此页面"
+
+#. js-lingui-explicit-id
+#: src/shared/i18n.ts:124
+msgid "pickerTitle"
+msgstr "LingoFrame 区域选择器"
+
+#. js-lingui-explicit-id
+#: src/shared/i18n.ts:12
+msgid "settingsTitle"
+msgstr "LingoFrame 设置"
+
+#. js-lingui-explicit-id
+#: src/shared/i18n.ts:19
+msgid "loadingSettings"
+msgstr "正在加载设置…"
+
+#. js-lingui-explicit-id
+#: src/shared/i18n.ts:59
+msgid "model"
+msgstr "模型"
+
+#. js-lingui-explicit-id
+#: src/shared/i18n.ts:126
+msgid "noText"
+msgstr "此区域没有可翻译的文字"
+
+#. js-lingui-explicit-id
+#: src/shared/i18n.ts:56
+msgid "compatible"
+msgstr "兼容 OpenAI 的服务"
+
+#. js-lingui-explicit-id
+#: src/shared/i18n.ts:55
+msgid "provider"
+msgstr "服务商"
+
+#. js-lingui-explicit-id
+#: src/shared/i18n.ts:67
+msgid "save"
+msgstr "保存设置"
+
+#. js-lingui-explicit-id
+#: src/shared/i18n.ts:68
+msgid "saving"
+msgstr "正在保存…"
+
+#. js-lingui-explicit-id
+#: src/shared/i18n.ts:8
+msgid "brandTagline"
+msgstr "选择区域 · 翻译你关心的内容"
+
+#. js-lingui-explicit-id
+#: src/shared/i18n.ts:128
+msgid "actionTitle"
+msgstr "选择要翻译的区域"
+
+#. js-lingui-explicit-id
+#: src/shared/i18n.ts:133
+msgid "extensionDescription"
+msgstr "选择区域，翻译你关心的内容。"
+
+#. js-lingui-explicit-id
+#: src/shared/i18n.ts:30
+msgid "instructionsDescription"
+msgstr "设置术语、语气、读者和写作风格。"
+
+#. js-lingui-explicit-id
+#: src/shared/i18n.ts:69
+msgid "saved"
+msgstr "设置已保存"
+
+#. js-lingui-explicit-id
+#: src/shared/i18n.ts:65
+msgid "showKey"
+msgstr "显示"
+
+#. js-lingui-explicit-id
+#: src/shared/i18n.ts:28
+msgid "openLanguages"
+msgstr "展开语言列表"
+
+#. js-lingui-explicit-id
+#: src/shared/i18n.ts:123
+msgid "unknownError"
+msgstr "操作未完成，请重试。"
+
+#. js-lingui-explicit-id
+#: src/shared/i18n.ts:61
+msgid "keyHint"
+msgstr "保存在当前浏览器配置中，仅用于访问你选择的翻译服务。"
+
+#. js-lingui-explicit-id
+#: src/shared/i18n.ts:25
+msgid "targetLanguage"
+msgstr "目标语言"
+
+#. js-lingui-explicit-id
+#: src/shared/i18n.ts:70
+msgid "test"
+msgstr "测试配置"
+
+#. js-lingui-explicit-id
+#: src/shared/i18n.ts:71
+msgid "testing"
+msgstr "正在测试…"
+
+#. js-lingui-explicit-id
+#: src/shared/i18n.ts:76
+msgid "privacy"
+msgstr "所选区域中的文字会发送至你选择的翻译服务。"
+
+#. js-lingui-explicit-id
+#: src/shared/i18n.ts:89
+msgid "invalidResponse"
+msgstr "服务返回的译文不完整或无法读取，请重试或更换模型。"
+
+#. js-lingui-explicit-id
+#: src/shared/i18n.ts:98
+msgid "httpError"
+msgstr "服务返回 HTTP {status}，请检查 API 地址、密钥和服务额度。"
+
+#. js-lingui-explicit-id
+#: src/shared/i18n.ts:111
+msgid "connectionClosed"
+msgstr "翻译连接已断开，请重新选择区域重试。"
+
+#. js-lingui-explicit-id
+#: src/shared/i18n.ts:107
+msgid "timeout"
+msgstr "翻译请求超时，请重试。"
+
+#. js-lingui-explicit-id
+#: src/shared/i18n.ts:94
+msgid "invalidSession"
+msgstr "无法开始翻译，请重新选择区域。"
+
+#. js-lingui-explicit-id
+#: src/shared/i18n.ts:127
+msgid "translating"
+msgstr "正在翻译"
+
+#. js-lingui-explicit-id
+#: src/shared/i18n.ts:20
+msgid "behaviorTitle"
+msgstr "翻译偏好"
+
+#. js-lingui-explicit-id
+#: src/shared/i18n.ts:29
+msgid "instructions"
+msgstr "翻译指令"
+
+#. js-lingui-explicit-id
+#: src/shared/i18n.ts:50
+msgid "providerTitle"
+msgstr "翻译服务"
+
+#. js-lingui-explicit-id
+#: src/shared/i18n.ts:49
+msgid "resetInstructions"
+msgstr "使用内置默认"
+
+#. js-lingui-explicit-id
+#: src/shared/i18n.ts:27
+msgid "customLanguage"
+msgstr "使用自定义语言：{name}"
+
+#. js-lingui-explicit-id
+#: src/shared/i18n.ts:58
+msgid "baseUrlHint"
+msgstr "使用 HTTPS，本地服务可使用 HTTP。"
+
+#. js-lingui-explicit-id
+#: src/shared/i18n.ts:35
+msgid "defaultDescription"
+msgstr "使用推荐的翻译偏好。"
+
+#. js-lingui-explicit-id
+#: src/shared/i18n.ts:40
+msgid "customDescription"
+msgstr "使用你自己的翻译偏好。"
+
+#. js-lingui-explicit-id
+#: src/shared/i18n.ts:44
+msgid "viewInstructions"
+msgstr "查看内置指令"
