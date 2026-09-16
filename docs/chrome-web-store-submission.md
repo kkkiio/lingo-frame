@@ -1,8 +1,41 @@
 # Chrome Web Store Submission
 
-This document contains copy-ready metadata and reviewer notes for the first public LingoFrame release. Keep every field aligned with the behavior of the submitted package.
+This document contains copy-ready metadata and reviewer notes for LingoFrame. Keep every field aligned with the behavior of the submitted package.
 
-## Product details
+## Store languages
+
+The package supports Simplified Chinese (`zh_CN`, default) and English (`en`). After uploading the package, select each locale at the top of the Store listing page and save its description. Store languages describe the extension's localization; the translation target is configured separately and defaults to Simplified Chinese.
+
+## 简体中文商店介绍
+
+### 名称
+
+LingoFrame
+
+### 简介
+
+选择区域，翻译你关心的内容。
+
+### 详细说明
+
+LingoFrame 是一款网页区域翻译扩展，适合阅读英文文章、技术文档、评论和讨论。选择你想读的内容区域，即可在原文旁逐段查看中文译文，保留阅读上下文。
+
+点击工具栏中的 LingoFrame 图标，或按 Alt+Shift+L，将鼠标移到想翻译的区域并点击。译文会依次出现在对应原文之后，方便中英对照阅读。按 Esc 可退出区域选择。
+
+主要功能：
+
+- 按需翻译所选区域中的文字，适用于文章、评论、聊天消息、表格和侧栏。
+- 原文与译文逐段对应，支持保留链接、粗体、斜体和行内代码等格式。
+- 支持 DeepSeek 和兼容 OpenAI Chat Completions API 的服务，也可连接本地模型服务。
+- 默认翻译为简体中文，可选择其他目标语言或输入自定义语言。
+- 可自定义翻译要求，包括术语、语气和表达风格。
+- 设置界面支持简体中文和英文，可跟随浏览器语言或手动切换。
+
+使用前，请在设置页填写你自己的翻译服务 API Key，并选择服务和模型。扩展免费使用；翻译服务可能按其规则收费。
+
+你选中区域中的文字会直接发送到你配置的翻译服务。API Key 和设置保存在本地浏览器中，LingoFrame 不运营中转翻译服务器。
+
+## English store listing
 
 ### Name
 
@@ -10,27 +43,26 @@ LingoFrame
 
 ### Summary
 
-Select a webpage region and translate only the readable text inside it with your chosen AI provider.
+Select a region. Translate what matters.
 
 ### Detailed description
 
-LingoFrame gives you a focused way to translate the part of a webpage that matters.
+LingoFrame translates the part of a webpage you choose, with each translation displayed immediately after its original text. Read articles, technical documentation, comments, and discussions in a bilingual layout without losing context.
 
-Activate the extension from the toolbar or with `Alt+Shift+L`, point to a content Region, and click to translate. LingoFrame keeps the original content in place and inserts each translation immediately after its corresponding source block, creating an easy-to-read bilingual layout.
-
-LingoFrame is useful for articles, comments, posts, chat messages, table cells, document paragraphs, sidebars, and cards. Scanning stays strictly inside the Region you confirm.
+Click the LingoFrame toolbar icon or press Alt+Shift+L, point to the region you want to read, and click to translate. Press Esc to cancel region selection.
 
 Key features:
 
-- DevTools-style Region Picker with hover highlighting and Escape cancellation.
-- Region-bounded readable-text scanning.
-- Interleaved source and translated content.
-- DeepSeek and OpenAI Chat Completions-compatible providers.
-- User-controlled target language, model, endpoint, and API Key.
-- On-demand `activeTab` access and optional permission for the configured provider origin.
-- API Key storage restricted to trusted extension contexts.
+- Translate text on demand within a selected region, including articles, comments, chat messages, tables, and sidebars.
+- Read original and translated text together, with support for links, bold, italics, and inline code formatting.
+- Connect to DeepSeek, OpenAI Chat Completions-compatible providers, or a local model service.
+- Translate into Simplified Chinese by default, choose another target language, or enter a custom language.
+- Customize translation instructions for terminology, tone, and writing style.
+- Use the settings interface in Simplified Chinese or English, following your browser language or your own selection.
 
-LingoFrame sends only the text from a Region you explicitly select to the provider you configure. It does not operate an intermediary translation server.
+Before using LingoFrame, enter your own provider API key and choose a service and model in settings. The extension is free; your translation provider may charge for API usage.
+
+Text in the region you select is sent directly to your configured translation provider. Your API key and settings are stored in your local browser. LingoFrame does not operate an intermediary translation server.
 
 ### Suggested category
 
@@ -103,7 +135,7 @@ Provide a temporary, rate-limited API Key in the private reviewer credential fie
 1. Install the submitted package and click the LingoFrame toolbar icon. The options page opens because no API Key is configured.
 2. Select the Provider specified in the private reviewer notes.
 3. Enter the supplied API Base URL, model, and temporary API Key.
-4. Keep `Simplified Chinese` as the target language, click `Test connection`, and confirm that `Provider connection succeeded` appears.
+4. Switch the interface language to English if needed. Keep `Simplified Chinese` as the target language, click `Test configuration`, and confirm that the configuration test succeeds.
 5. Click `Save settings` and approve the permission request for the configured Provider Origin.
 6. Open a normal HTTP or HTTPS page containing several paragraphs.
 7. Click the LingoFrame toolbar icon or press `Alt+Shift+L`.
@@ -130,7 +162,7 @@ Chrome internal pages and the Chrome Web Store cannot be used for this test beca
 5. Wait for the Release workflow to create the Draft GitHub Release.
 6. Download the Chrome ZIP and SHA-256 checksum from that Draft Release.
 7. Verify the uploaded manifest name, description, version, permissions, and optional host permissions.
-8. Upload the approved icon, screenshots, and promo tile.
+8. Save the Simplified Chinese and English descriptions above in their respective Store listing locales, and upload the approved icon, screenshots, and promo tile.
 9. Complete Store listing, Privacy practices, Distribution, and Test instructions.
 10. Upload the Release workflow's Chrome ZIP and submit for review with deferred publishing enabled.
 11. Publish the GitHub Release after the Chrome Web Store submission is approved.

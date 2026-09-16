@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="440" height="280" viewBox="0 0 440 280" role="img" aria-label="LingoFrame — region selection and bilingual reading">
+  <rect width="440" height="280" fill="#F7F3EB"/>
+  <g transform="translate(24 18) scale(.375)">
+    <rect x="4" y="4" width="120" height="120" rx="28" fill="#F36D4D"/>
+    <path d="M53 31H33v66h62V76" fill="none" stroke="#FFF9F0" stroke-width="10" stroke-linejoin="round"/>
+    <path d="M59 56h39M59 70h23" stroke="#FFF9F0" stroke-width="8" stroke-linecap="round"/>
+    <circle cx="96" cy="32" r="7" fill="#292D2B"/>
+  </g>
+  <text x="86" y="51" font-family="Arial, sans-serif" font-size="25" font-weight="600" fill="#292D2B">LingoFrame</text>
+  <rect x="26" y="88" width="388" height="169" rx="14" fill="#FFFFFF"/>
+  <rect x="44" y="107" width="141" height="94" rx="7" fill="#FFF0EA" stroke="#F36D4D" stroke-width="2"/>
+  <g stroke="#292D2B" stroke-width="5" stroke-linecap="round">
+    <path d="M57 123h95M57 139h111M57 155h83M57 179h102" opacity=".65"/>
+    <path d="M263 123h112M263 171h92"/>
+    <path d="M47 219h106M47 232h131" opacity=".2"/>
+  </g>
+  <g stroke="#F36D4D" stroke-width="5" stroke-linecap="round">
+    <path d="M263 139h94M263 187h115M263 219h80M263 232h102"/>
+  </g>
+  <path d="M205 156h30m-10-10 10 10-10 10" fill="none" stroke="#F36D4D" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

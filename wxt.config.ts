@@ -11,7 +11,7 @@ export default defineConfig({
   manifest: {
     name: "LingoFrame",
     description: "__MSG_extensionDescription__",
-    default_locale: "en",
+    default_locale: "zh_CN",
     minimum_chrome_version: "102",
     permissions: ["activeTab", "scripting", "storage"],
     optional_host_permissions: [
