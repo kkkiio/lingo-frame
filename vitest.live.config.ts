@@ -1,3 +1,4 @@
+import { lingui } from "@lingui/vite-plugin";
 import { existsSync } from "node:fs";
 import { loadEnvFile } from "node:process";
 import { defineConfig } from "vitest/config";
@@ -7,6 +8,7 @@ if (existsSync(".env")) {
 }
 
 export default defineConfig({
+  plugins: [lingui()],
   test: {
     environment: "happy-dom",
     include: ["tests/live/**/*.live.ts"],

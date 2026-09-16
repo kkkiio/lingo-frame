@@ -14,7 +14,7 @@ Translation Session 需要尽快返回 Region 顶部的译文，同时避免大�
 
 Translation Unit 继续负责 DOM 对齐、Translation Slot 和独立翻译状态。Translation Segment 继续负责一个请求内的输入输出对齐。Translation Chunk 专门负责请求批次，不再与每个标题或空行一一对应。
 
-标题、Translation Unit 边界和连续空行是候选切分点。Chunk builder 按阅读顺序累计 Segment，并根据新增源文本的估算 token 数选择候选边界：
+标题、Translation Unit 边界和连续空行是候选切分点。Chunk builder 按阅读顺序累计 Segment，并根据新增 Segment 的 Markdown 文本的估算 token 数选择候选边界：
 
 | 批次 | 最小值 | 目标值 | 软上限 |
 | --- | ---: | ---: | ---: |

@@ -1,3 +1,5 @@
+import { i18n, uiMessages } from "../../shared/i18n";
+
 const PICKER_HOST_ATTRIBUTE = "data-lingo-frame-picker";
 
 export class RegionPicker {
@@ -11,10 +13,11 @@ export class RegionPicker {
   private pointerX = Math.round(window.innerWidth / 2);
   private pointerY = Math.round(window.innerHeight / 2);
   private settled = false;
+  private unsubscribeLocale: (() => void) | null = null;
 
   constructor(private readonly cssText: string) {
     this.host.setAttribute(PICKER_HOST_ATTRIBUTE, "");
-    this.host.title = "LingoFrame region picker";
+    this.host.title = i18n._(uiMessages.pickerTitle);
     this.host.tabIndex = -1;
     for (const [property, value] of Object.entries({
       all: "initial",
@@ -49,7 +52,13 @@ export class RegionPicker {
       style.textContent = this.cssText;
       highlight.className = "lingo-frame-picker-highlight";
       label.className = "lingo-frame-picker-label";
-      label.textContent = "Click a region to translate · Esc to cancel";
+      label.textContent = i18n._(uiMessages.pickerHint);
+      this.unsubscribeLocale = i18n.on("change", () => {
+        label.textContent = i18n._(uiMessages.pickerHint);
+        this.host.title = i18n._(uiMessages.pickerTitle);
+        overlayDocument.documentElement.lang = i18n.locale;
+      });
+      overlayDocument.documentElement.lang = i18n.locale;
       overlayDocument.head.replaceChildren(style);
       overlayDocument.body.replaceChildren(highlight, label);
       this.highlight = highlight;
@@ -111,25 +120,23 @@ export class RegionPicker {
     event.stopPropagation();
     event.stopImmediatePropagation();
     const hit = this.findElementAtPoint(event.clientX, event.clientY);
-    let scrollTarget = hit instanceof HTMLElement ? hit : hit?.parentElement ?? null;
+    let scrollTarget = hit instanceof HTMLElement ? hit : (hit?.parentElement ?? null);
     let handled = false;
 
     while (scrollTarget) {
       const style = getComputedStyle(scrollTarget);
       const maxTop = scrollTarget.scrollHeight - scrollTarget.clientHeight;
       const maxLeft = scrollTarget.scrollWidth - scrollTarget.clientWidth;
-      const canMoveVertically = (
+      const canMoveVertically =
         /auto|scroll|overlay/.test(style.overflowY) &&
         maxTop > 0 &&
         ((event.deltaY < 0 && scrollTarget.scrollTop > 0) ||
-          (event.deltaY > 0 && scrollTarget.scrollTop < maxTop))
-      );
-      const canMoveHorizontally = (
+          (event.deltaY > 0 && scrollTarget.scrollTop < maxTop));
+      const canMoveHorizontally =
         /auto|scroll|overlay/.test(style.overflowX) &&
         maxLeft > 0 &&
         ((event.deltaX < 0 && scrollTarget.scrollLeft > 0) ||
-          (event.deltaX > 0 && scrollTarget.scrollLeft < maxLeft))
-      );
+          (event.deltaX > 0 && scrollTarget.scrollLeft < maxLeft));
 
       if (canMoveVertically || canMoveHorizontally) {
         scrollTarget.scrollBy(
@@ -145,9 +152,8 @@ export class RegionPicker {
         continue;
       }
       const root = scrollTarget.getRootNode();
-      scrollTarget = root instanceof ShadowRoot && root.host instanceof HTMLElement
-        ? root.host
-        : null;
+      scrollTarget =
+        root instanceof ShadowRoot && root.host instanceof HTMLElement ? root.host : null;
     }
 
     if (!handled) {
@@ -192,29 +198,30 @@ export class RegionPicker {
     this.host.style.setProperty("pointer-events", "none", "important");
     try {
       const stacked = document.elementsFromPoint(clientX, clientY);
-      let candidate = stacked.find((element) => {
-        if (
-          element === this.host ||
-          element.closest(`[${PICKER_HOST_ATTRIBUTE}]`) ||
-          element.closest("[data-lingo-frame-ui]")
-        ) {
-          return false;
-        }
+      let candidate =
+        stacked.find((element) => {
+          if (
+            element === this.host ||
+            element.closest(`[${PICKER_HOST_ATTRIBUTE}]`) ||
+            element.closest("[data-lingo-frame-ui]")
+          ) {
+            return false;
+          }
 
-        if (element === document.documentElement || element === document.body) {
-          return false;
-        }
+          if (element === document.documentElement || element === document.body) {
+            return false;
+          }
 
-        const style = getComputedStyle(element);
-        const rect = element.getBoundingClientRect();
-        return (
-          style.display !== "none" &&
-          style.visibility !== "hidden" &&
-          style.opacity !== "0" &&
-          rect.width > 0 &&
-          rect.height > 0
-        );
-      }) ?? document.elementFromPoint(clientX, clientY);
+          const style = getComputedStyle(element);
+          const rect = element.getBoundingClientRect();
+          return (
+            style.display !== "none" &&
+            style.visibility !== "hidden" &&
+            style.opacity !== "0" &&
+            rect.width > 0 &&
+            rect.height > 0
+          );
+        }) ?? document.elementFromPoint(clientX, clientY);
 
       while (candidate?.shadowRoot) {
         const nested = candidate.shadowRoot.elementFromPoint(clientX, clientY);
@@ -260,6 +267,8 @@ export class RegionPicker {
     }
 
     this.settled = true;
+    this.unsubscribeLocale?.();
+    this.unsubscribeLocale = null;
     this.abortController.abort();
     this.resizeObserver.disconnect();
     if (this.animationFrame) {

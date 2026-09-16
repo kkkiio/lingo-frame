@@ -1,18 +1,14 @@
+import type { TranslationFailure } from "./errors";
 import type { Settings } from "./settings";
 
 export type TranslationUnitRole =
-  | "heading"
-  | "paragraph"
-  | "list-item"
-  | "quote"
-  | "table-cell"
-  | "caption"
-  | "text";
+  "heading" | "paragraph" | "list-item" | "quote" | "table-cell" | "caption" | "text";
 
 export interface TranslationSegment {
   id: string;
   unitId: string;
   role: TranslationUnitRole;
+  /** Inline Markdown, serialized within this Segment. */
   text: string;
 }
 
@@ -25,31 +21,31 @@ export const TRANSLATION_SESSION_PORT = "LINGO_FRAME_TRANSLATION_SESSION";
 
 export type TranslationSessionCommand =
   | {
-    type: "START_TRANSLATION_SESSION";
-    sessionId: string;
-    chunks: TranslationChunk[];
-  }
+      type: "START_TRANSLATION_SESSION";
+      sessionId: string;
+      chunks: TranslationChunk[];
+    }
   | {
-    type: "CANCEL_TRANSLATION_SESSION";
-    sessionId: string;
-  };
+      type: "CANCEL_TRANSLATION_SESSION";
+      sessionId: string;
+    };
 
 export type TranslationSessionEvent =
   | {
-    type: "TRANSLATION_CHUNK_COMPLETED";
-    sessionId: string;
-    chunkId: string;
-    translations: TranslationResult[];
-  }
+      type: "TRANSLATION_CHUNK_COMPLETED";
+      sessionId: string;
+      chunkId: string;
+      translations: TranslationResult[];
+    }
   | {
-    type: "TRANSLATION_SESSION_COMPLETED";
-    sessionId: string;
-  }
+      type: "TRANSLATION_SESSION_COMPLETED";
+      sessionId: string;
+    }
   | {
-    type: "TRANSLATION_SESSION_FAILED";
-    sessionId: string;
-    error: string;
-  };
+      type: "TRANSLATION_SESSION_FAILED";
+      sessionId: string;
+      error: TranslationFailure;
+    };
 
 export interface TestProviderMessage {
   type: "TEST_PROVIDER";
@@ -60,9 +56,8 @@ export type RuntimeMessage = TestProviderMessage;
 
 export interface TranslationResult {
   id: string;
+  /** Inline Markdown, serialized within this Segment. */
   text: string;
 }
 
-export type TranslationResponse =
-  | { ok: true }
-  | { ok: false; error: string };
+export type TranslationResponse = { ok: true } | { ok: false; error: TranslationFailure };

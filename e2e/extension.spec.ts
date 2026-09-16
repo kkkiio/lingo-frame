@@ -5,9 +5,10 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
-const progressiveArticle = readFileSync(resolve(
-  "tests/fixtures/translation-sessions/progressive-article.html",
-), "utf8").trim();
+const progressiveArticle = readFileSync(
+  resolve("tests/fixtures/translation-sessions/progressive-article.html"),
+  "utf8",
+).trim();
 
 let server: Server;
 let origin: string;
@@ -32,7 +33,9 @@ test.beforeAll(async () => {
     }
     if (request.url === "/v1/chat/completions") {
       let body = "";
-      request.on("data", (chunk) => { body += chunk; });
+      request.on("data", (chunk) => {
+        body += chunk;
+      });
       request.on("end", () => {
         const payload = JSON.parse(body);
         const providerRequest = JSON.parse(payload.messages.at(-1).content);
@@ -42,17 +45,25 @@ test.beforeAll(async () => {
           messages: payload.messages,
         });
         const translations: Record<string, string> = {
+          "Read **the *full guide***, then run `pnpm test` and [continue](lf-link:1).":
+            "阅读**完整的*指南***，然后运行 `pnpm test` 并[继续](lf-link:1)。",
+          "First **item**": "第一**项**",
+          "Another *cell*": "另一个*单元格*",
           "How small questions reshape a big idea": "小问题如何重塑一个大想法",
-          "Reading becomes active when we pause at uncertainty, connect it to what we know, and let new context change the whole picture.": "当我们在不确定之处停下来，将它与已知经验连接，并让新的语境改变整体图景时，阅读就真正变得主动。",
-          "Keep the original nearby while you explore the translation.": "探索译文时，让原文始终近在眼前。",
+          "Reading becomes active when we pause at uncertainty, connect it to what we know, and let new context change the whole picture.":
+            "当我们在不确定之处停下来，将它与已知经验连接，并让新的语境改变整体图景时，阅读就真正变得主动。",
+          "[Keep the original nearby while you explore the translation.](lf-link:1)":
+            "[探索译文时，让原文始终近在眼前。](lf-link:1)",
           "Readable text inside an open shadow root.": "开放式 Shadow Root 内的可读文本。",
           "First paragraph.": "第一段。",
           "Second paragraph.": "第二段。",
-          "1. First item": "1. 第一项",
-          "2. Second item": "2. 第二项",
+          "1\\. First item": "1\\. 第一项",
+          "2\\. Second item": "2\\. 第二项",
           "First paragraph.\n\nSecond paragraph.": "第一段。\n\n第二段。",
-          "Preformatted prose can carry a complete article without containing source code.": "预格式化文本也可以承载不含源代码的完整文章。",
-          "Why does /plan still cheat while /prewalk doesn't?": "为什么 /plan 仍然作弊，而 /prewalk 不会？",
+          "Preformatted prose can carry a complete article without containing source code.":
+            "预格式化文本也可以承载不含源代码的完整文章。",
+          "Why does `/plan` still cheat while `/prewalk` doesn't?":
+            "为什么 `/plan` 仍然作弊，而 `/prewalk` 不会？",
         };
         if (
           providerRequest.segments.some(
@@ -62,20 +73,45 @@ test.beforeAll(async () => {
           response.writeHead(429).end("rate limited");
           return;
         }
-        const delay = providerRequest.segments.some(
-          ({ text }: { text: string }) => text === "Second section",
-        ) ? 700 : 0;
+        if (payload.model === "http-error") {
+          response.writeHead(401).end("invalid credentials");
+          return;
+        }
+        const delay =
+          payload.model === "slow-model"
+            ? 600
+            : providerRequest.segments.some(
+                  ({ text }: { text: string }) => text === "Second section",
+                )
+              ? 700
+              : 0;
         setTimeout(() => {
           response.setHeader("Content-Type", "application/json");
-          response.end(JSON.stringify({
-            choices: [{ message: { content: JSON.stringify({
-              translations: providerRequest.segments.map((segment: { text: string }) => (
-                translations[segment.text] ?? `译文：${segment.text}`
-              )),
-            }) } }],
-          }));
+          response.end(
+            JSON.stringify({
+              choices: [
+                {
+                  message: {
+                    content: JSON.stringify({
+                      translations: providerRequest.segments.map(
+                        (segment: { text: string }) =>
+                          translations[segment.text] ?? `译文：${segment.text}`,
+                      ),
+                    }),
+                  },
+                },
+              ],
+            }),
+          );
         }, delay);
       });
+      return;
+    }
+    if (request.url === "/formatted") {
+      response.setHeader("Content-Type", "text/html; charset=utf-8");
+      response.end(
+        '<html><body style="font:18px/1.6 system-ui"><article id="formatted" style="padding:40px"><p>Read <strong>the <em>full guide</em></strong>, then run <code>pnpm test</code> and <a href="https://example.org/guide">continue</a>.</p><ul><li>First <strong>item</strong></li></ul><table><tr><td>Another <em>cell</em></td></tr></table></article></body></html>',
+      );
       return;
     }
     response.setHeader("Content-Type", "text/html; charset=utf-8");
@@ -244,9 +280,9 @@ test.beforeAll(async () => {
             document.body.replaceChildren(article);
           }
           if (location.pathname === '/selected-code') {
-            document.body.innerHTML = ${JSON.stringify(readFileSync(
-              "tests/fixtures/region-scanning/code--selected-inside-pre.html", "utf8",
-            ))};
+            document.body.innerHTML = ${JSON.stringify(
+              readFileSync("tests/fixtures/region-scanning/code--selected-inside-pre.html", "utf8"),
+            )};
             document.querySelector('#selected').style.cssText = 'display:inline-block;padding:20px;margin:40px';
           }
         </script>
@@ -267,34 +303,38 @@ test.beforeAll(async () => {
     channel: "chromium",
     headless: true,
     viewport: { width: 1280, height: 800 },
-    args: [
-      `--disable-extensions-except=${extensionPath}`,
-      `--load-extension=${extensionPath}`,
-    ],
+    args: [`--disable-extensions-except=${extensionPath}`, `--load-extension=${extensionPath}`],
   });
-  worker = context.serviceWorkers()[0] ?? await context.waitForEvent("serviceworker");
+  worker = context.serviceWorkers()[0] ?? (await context.waitForEvent("serviceworker"));
   const workerUrl = new URL(worker.url());
   extensionOrigin = `${workerUrl.protocol}//${workerUrl.host}`;
-  await worker.evaluate(async ({ baseUrl }) => {
-    await chrome.storage.local.set({
-      settings: {
-        provider: "openai-compatible",
-        targetLanguage: "Simplified Chinese",
-        providers: {
-          deepseek: {
-            apiKey: "",
-            baseUrl: "https://api.deepseek.com",
-            model: "deepseek-v4-flash",
-          },
-          "openai-compatible": {
-            apiKey: "e2e-key",
-            baseUrl,
-            model: "mock-model",
+  await worker.evaluate(
+    async ({ baseUrl }) => {
+      await chrome.storage.local.set({
+        settings: {
+          provider: "openai-compatible",
+          targetLanguage: "Simplified Chinese",
+          providers: {
+            deepseek: {
+              apiKey: "",
+              baseUrl: "https://api.deepseek.com",
+              model: "deepseek-v4-flash",
+            },
+            "openai-compatible": {
+              apiKey: "e2e-key",
+              baseUrl,
+              model: "mock-model",
+            },
           },
         },
-      },
-    });
-  }, { baseUrl: `${origin}/v1` });
+      });
+    },
+    { baseUrl: `${origin}/v1` },
+  );
+});
+
+test.beforeEach(async () => {
+  await worker.evaluate(() => chrome.storage.local.set({ uiPreferences: { locale: "en" } }));
 });
 
 test.afterAll(async () => {
@@ -319,7 +359,7 @@ async function activatePicker(): Promise<void> {
 }
 
 test("selects one region, suppresses the page click, and renders bilingual text", async () => {
-  const page = context.pages()[0] ?? await context.newPage();
+  const page = context.pages()[0] ?? (await context.newPage());
   await page.goto(origin);
   await activatePicker();
   const requestCount = providerRequests.length;
@@ -347,16 +387,21 @@ test("selects one region, suppresses the page click, and renders bilingual text"
   await expect(page.locator("#outside .lingo-frame-bilingual-content")).toHaveCount(0);
   await expect(page.locator("#region")).toContainText("小问题如何重塑一个大想法");
   await expect(page).not.toHaveURL(/#clicked$/);
-  expect(await page.evaluate(() => (window as unknown as { pageClicks: number }).pageClicks)).toBe(0);
-  expect(await page.evaluate(() => (window as unknown as { captureClicks: number }).captureClicks)).toBe(0);
+  expect(await page.evaluate(() => (window as unknown as { pageClicks: number }).pageClicks)).toBe(
+    0,
+  );
+  expect(
+    await page.evaluate(() => (window as unknown as { captureClicks: number }).captureClicks),
+  ).toBe(0);
   expect(providerRequests).toHaveLength(requestCount + 1);
   expect(providerRequests.at(-1)?.segments.map(({ text }) => text)).toEqual([
     "How small questions reshape a big idea",
     "Reading becomes active when we pause at uncertainty, connect it to what we know, and let new context change the whole picture.",
-    "Keep the original nearby while you explore the translation.",
+    "[Keep the original nearby while you explore the translation.](lf-link:1)",
   ]);
-  await expect(page.locator("#region h1 > .lingo-frame-bilingual-content"))
-    .toHaveText("小问题如何重塑一个大想法");
+  await expect(page.locator("#region h1 > .lingo-frame-bilingual-content")).toHaveText(
+    "小问题如何重塑一个大想法",
+  );
   await expect(page.locator("#danger .lingo-frame-bilingual-content")).toHaveCount(0);
   if (process.env.CAPTURE_DEMO === "1") {
     await page.screenshot({ path: resolve("docs/images/bilingual-result.png") });
@@ -383,8 +428,8 @@ test("coalesces short hard-break sections into one request", async () => {
   expect(providerRequests).toHaveLength(requestCount + 1);
   expect(providerRequests.at(-1)?.segments.map(({ text }) => text)).toEqual([
     "First paragraph.",
-    "1. First item",
-    "2. Second item",
+    "1\\. First item",
+    "2\\. Second item",
   ]);
 });
 
@@ -427,7 +472,8 @@ test("translates natural-language prose in an explicitly selected pre region", a
   const box = await region.boundingBox();
   expect(box).not.toBeNull();
   await page.mouse.move(box!.x + 12, box!.y + 12);
-  const highlight = page.frameLocator("iframe[data-lingo-frame-picker]")
+  const highlight = page
+    .frameLocator("iframe[data-lingo-frame-picker]")
     .locator(".lingo-frame-picker-highlight");
   await expect(highlight).toHaveAttribute("data-candidate", "pre");
   await page.mouse.click(box!.x + 12, box!.y + 12);
@@ -436,10 +482,12 @@ test("translates natural-language prose in an explicitly selected pre region", a
   await expect(translation).toHaveCount(1);
   await expect(translation).toHaveText("预格式化文本也可以承载不含源代码的完整文章。");
   expect(providerRequests).toHaveLength(requestCount + 1);
-  expect(providerRequests.at(-1)?.segments).toEqual([{
-    role: "text",
-    text: "Preformatted prose can carry a complete article without containing source code.",
-  }]);
+  expect(providerRequests.at(-1)?.segments).toEqual([
+    {
+      role: "text",
+      text: "Preformatted prose can carry a complete article without containing source code.",
+    },
+  ]);
 });
 
 test("progressively translates a ClaudeFast-style structured article", async () => {
@@ -454,29 +502,40 @@ test("progressively translates a ClaudeFast-style structured article", async () 
   await page.mouse.move(box!.x + 12, box!.y + 12);
   await page.mouse.click(box!.x + 12, box!.y + 12);
 
-  await expect(region.locator("h1 > .lingo-frame-bilingual-content"))
-    .toHaveText("译文：Article title");
+  await expect(region.locator("h1 > .lingo-frame-bilingual-content")).toHaveText(
+    "译文：Article title",
+  );
   await expect(region.locator("h2 .lingo-frame-loading")).toHaveCount(1);
   await expect.poll(() => providerRequests.length).toBe(requestCount + 2);
   const secondRequest = providerRequests.at(-1)!;
-  expect(secondRequest.messages.map(({ role }) => role))
-    .toEqual(["system", "user", "assistant", "user"]);
-  expect(JSON.parse(secondRequest.messages[1]!.content).segments.map(
-    ({ text }: { text: string }) => text,
-  )).toEqual(providerRequests.at(-2)?.segments.map(({ text }) => text));
-  expect(secondRequest.segments.map(({ text }) => text))
-    .toEqual([
-      "Second section",
-      "Section paragraph",
-      "Third section",
-      "Closing paragraph",
-    ]);
+  expect(secondRequest.messages.map(({ role }) => role)).toEqual([
+    "system",
+    "user",
+    "assistant",
+    "user",
+  ]);
+  expect(
+    JSON.parse(secondRequest.messages[1]!.content).segments.map(
+      ({ text }: { text: string }) => text,
+    ),
+  ).toEqual(providerRequests.at(-2)?.segments.map(({ text }) => text));
+  expect(secondRequest.segments.map(({ text }) => text)).toEqual([
+    "Second section",
+    "Section paragraph",
+    "Third section",
+    "Closing paragraph",
+  ]);
 
   await expect(region.locator(".lingo-frame-bilingual-content")).toHaveCount(6);
   await expect(region.locator(".lingo-frame-loading")).toHaveCount(0);
   expect(providerRequests).toHaveLength(requestCount + 2);
-  expect(JSON.stringify(providerRequests.slice(requestCount).map(({ body }) => body), null, 2) + "\n")
-    .toMatchSnapshot("multi-turn-requests.json");
+  expect(
+    JSON.stringify(
+      providerRequests.slice(requestCount).map(({ body }) => body),
+      null,
+      2,
+    ) + "\n",
+  ).toMatchSnapshot("multi-turn-requests.json");
 });
 
 test("translates an X-style Draft.js article through inline heading wrappers", async () => {
@@ -498,8 +557,7 @@ test("translates an X-style Draft.js article through inline heading wrappers", a
     "Second section",
     "Draft section paragraph",
   ]);
-  await expect(page.locator("#x-outside-control .lingo-frame-translation-slot"))
-    .toHaveCount(0);
+  await expect(page.locator("#x-outside-control .lingo-frame-translation-slot")).toHaveCount(0);
 });
 
 test("keeps inline mentions in their surrounding translation unit", async () => {
@@ -517,19 +575,21 @@ test("keeps inline mentions in their surrounding translation unit", async () => 
   await expect(region.locator(":scope > .lingo-frame-bilingual-content")).toHaveCount(1);
   await expect(region.locator(":scope > div > .lingo-frame-bilingual-content")).toHaveCount(0);
   expect(providerRequests).toHaveLength(requestCount + 1);
-  expect(providerRequests.at(-1)?.segments).toEqual([{
-    role: "text",
-    text: "Native web search is powered by @ExaAILabs and @SearchPartner.",
-  }]);
+  expect(providerRequests.at(-1)?.segments).toEqual([
+    {
+      role: "text",
+      text: "Native web search is powered by [@ExaAILabs](lf-link:1) and [@SearchPartner](lf-link:2).",
+    },
+  ]);
 });
 
 test("translates prose containing inline commands as a complete paragraph", async () => {
   const page = context.pages()[0]!;
   await page.goto(`${origin}/inline-code`);
   const region = page.locator("#inline-code-region");
-  const originalCode = await region.locator("code").evaluateAll(
-    (elements) => elements.map((element) => element.outerHTML),
-  );
+  const originalCode = await region
+    .locator("code:not(.lingo-frame-bilingual-content code)")
+    .evaluateAll((elements) => elements.map((element) => element.outerHTML));
   const requestCount = providerRequests.length;
   await activatePicker();
 
@@ -542,15 +602,20 @@ test("translates prose containing inline commands as a complete paragraph", asyn
   await expect(translation).toHaveText("为什么 /plan 仍然作弊，而 /prewalk 不会？");
   await expect(region.locator(".lingo-frame-bilingual-content")).toHaveCount(1);
   expect(providerRequests).toHaveLength(requestCount + 1);
-  expect(providerRequests.at(-1)?.segments).toEqual([{
-    role: "paragraph",
-    text: "Why does /plan still cheat while /prewalk doesn't?",
-  }]);
-  expect(JSON.stringify(providerRequests.at(-1)!.body, null, 2) + "\n")
-    .toMatchSnapshot("inline-code-request.json");
-  expect(await region.locator("code").evaluateAll(
-    (elements) => elements.map((element) => element.outerHTML),
-  )).toEqual(originalCode);
+  expect(providerRequests.at(-1)?.segments).toEqual([
+    {
+      role: "paragraph",
+      text: "Why does `/plan` still cheat while `/prewalk` doesn't?",
+    },
+  ]);
+  expect(JSON.stringify(providerRequests.at(-1)!.body, null, 2) + "\n").toMatchSnapshot(
+    "inline-code-request.json",
+  );
+  expect(
+    await region
+      .locator("code:not(.lingo-frame-bilingual-content code)")
+      .evaluateAll((elements) => elements.map((element) => element.outerHTML)),
+  ).toEqual(originalCode);
 });
 
 test("translates an explicitly selected code region inside a pre", async () => {
@@ -563,17 +628,21 @@ test("translates an explicitly selected code region inside a pre", async () => {
   const box = await region.boundingBox();
   expect(box).not.toBeNull();
   await page.mouse.move(box!.x + 12, box!.y + 12);
-  await expect(page.frameLocator("iframe[data-lingo-frame-picker]")
-    .locator(".lingo-frame-picker-highlight")).toHaveAttribute("data-candidate", "code");
+  await expect(
+    page.frameLocator("iframe[data-lingo-frame-picker]").locator(".lingo-frame-picker-highlight"),
+  ).toHaveAttribute("data-candidate", "code");
   await page.mouse.click(box!.x + 12, box!.y + 12);
 
-  await expect(region.locator(":scope > .lingo-frame-bilingual-content"))
-    .toHaveText("译文：pnpm test");
+  await expect(region.locator(":scope > .lingo-frame-bilingual-content")).toHaveText(
+    "译文：pnpm test",
+  );
   expect(providerRequests).toHaveLength(requestCount + 1);
-  expect(providerRequests.at(-1)?.segments).toEqual([{
-    role: "text",
-    text: "pnpm test",
-  }]);
+  expect(providerRequests.at(-1)?.segments).toEqual([
+    {
+      role: "text",
+      text: "pnpm test",
+    },
+  ]);
 });
 
 test("Escape removes the picker and restores normal page interaction", async () => {
@@ -585,7 +654,9 @@ test("Escape removes the picker and restores normal page interaction", async () 
   await page.keyboard.press("Escape");
   await expect(page.locator("iframe[data-lingo-frame-picker]")).toHaveCount(0);
   await page.locator("#page-button").click();
-  expect(await page.evaluate(() => (window as unknown as { pageClicks: number }).pageClicks)).toBe(1);
+  expect(await page.evaluate(() => (window as unknown as { pageClicks: number }).pageClicks)).toBe(
+    1,
+  );
 });
 
 test("deep-selects an open shadow root and installs bilingual styles inside it", async () => {
@@ -597,16 +668,20 @@ test("deep-selects an open shadow root and installs bilingual styles inside it",
   await region.scrollIntoViewIfNeeded();
   const regionBox = await region.boundingBox();
   expect(regionBox).not.toBeNull();
-  const stack = await page.evaluate(({ x, y }) => {
-    const picker = document.querySelector<HTMLIFrameElement>("iframe[data-lingo-frame-picker]")!;
-    picker.style.setProperty("pointer-events", "none", "important");
-    const names = document.elementsFromPoint(x, y).map((element) => element.localName);
-    picker.style.setProperty("pointer-events", "auto", "important");
-    return names;
-  }, { x: regionBox!.x + 12, y: regionBox!.y + 12 });
+  const stack = await page.evaluate(
+    ({ x, y }) => {
+      const picker = document.querySelector<HTMLIFrameElement>("iframe[data-lingo-frame-picker]")!;
+      picker.style.setProperty("pointer-events", "none", "important");
+      const names = document.elementsFromPoint(x, y).map((element) => element.localName);
+      picker.style.setProperty("pointer-events", "auto", "important");
+      return names;
+    },
+    { x: regionBox!.x + 12, y: regionBox!.y + 12 },
+  );
   expect(stack).toContain("shadow-region-host");
   await page.mouse.move(regionBox!.x + 12, regionBox!.y + 12);
-  const shadowHighlight = page.frameLocator("iframe[data-lingo-frame-picker]")
+  const shadowHighlight = page
+    .frameLocator("iframe[data-lingo-frame-picker]")
     .locator(".lingo-frame-picker-highlight");
   await expect(shadowHighlight).toHaveAttribute("data-candidate", "article");
   await page.mouse.click(regionBox!.x + 12, regionBox!.y + 12);
@@ -615,7 +690,7 @@ test("deep-selects an open shadow root and installs bilingual styles inside it",
   await expect(translation).toHaveCount(1);
   await expect(translation).toBeVisible();
   await expect(translation).toHaveCSS("display", "block");
-  await expect(translation).toHaveCSS("font-weight", "700");
+  await expect(translation).toHaveCSS("font-weight", "400");
 });
 
 test("routes picker wheel input to the nearest nested scroll container", async () => {
@@ -668,7 +743,9 @@ test("loads stored provider settings in the extension options page", async () =>
   await expect(page.getByLabel("Built-in default")).toBeChecked();
 
   await page.getByText("View built-in instructions").click();
-  await expect(page.locator(".instructions-preview")).toContainText("Use established technical terminology");
+  await expect(page.locator(".instructions-preview")).toContainText(
+    "Use established technical terminology",
+  );
 
   await page.getByLabel("Custom").check();
   const customInstructions = page.getByLabel("Custom translation instructions");
@@ -676,21 +753,178 @@ test("loads stored provider settings in the extension options page", async () =>
   await customInstructions.fill("Use concise technical language for domain experts.");
   await page.getByRole("button", { name: "Save settings" }).click();
   await expect(page.getByRole("status")).toHaveText("Settings saved");
-  expect(await worker.evaluate(async () => {
-    const { settings } = await chrome.storage.local.get("settings");
-    return (settings as { translationInstructions: string | null }).translationInstructions;
-  })).toBe("Use concise technical language for domain experts.");
+  expect(
+    await worker.evaluate(async () => {
+      const { settings } = await chrome.storage.local.get("settings");
+      return (settings as { translationInstructions: { mode: string; customText: string } })
+        .translationInstructions;
+    }),
+  ).toEqual({ mode: "custom", customText: "Use concise technical language for domain experts." });
 
-  await page.getByRole("button", { name: "Reset to default" }).click();
+  await page.getByRole("button", { name: "Use built-in default" }).click();
   await expect(page.getByLabel("Built-in default")).toBeChecked();
   await page.getByRole("button", { name: "Save settings" }).click();
   await expect(page.getByRole("status")).toHaveText("Settings saved");
-  expect(await worker.evaluate(async () => {
-    const { settings } = await chrome.storage.local.get("settings");
-    return (settings as { translationInstructions: string | null }).translationInstructions;
-  })).toBeNull();
+  expect(
+    await worker.evaluate(async () => {
+      const { settings } = await chrome.storage.local.get("settings");
+      return (settings as { translationInstructions: { mode: string; customText: string } })
+        .translationInstructions;
+    }),
+  ).toEqual({ mode: "default", customText: "Use concise technical language for domain experts." });
 
   await providerSelect.selectOption("deepseek");
   await expect(page.getByLabel("API base URL")).toHaveValue("https://api.deepseek.com");
+  await page.close();
+});
+
+test("switches interface language while preserving drafts and updating the active picker", async () => {
+  const page = context.pages()[0]!;
+  await page.goto(origin);
+  await page.bringToFront();
+  await activatePicker();
+  const picker = page
+    .frameLocator("iframe[data-lingo-frame-picker]")
+    .locator(".lingo-frame-picker-label");
+  await expect(picker).toContainText("Click a region");
+  const options = await context.newPage();
+  await options.goto(`${extensionOrigin}/options.html`);
+  await options.getByLabel("Model", { exact: true }).fill("unsaved-draft");
+  await options.getByRole("combobox", { name: "Interface language" }).click();
+  await options.getByRole("option", { name: "简体中文", exact: true }).click();
+  await expect(options.getByRole("heading", { name: "LingoFrame 设置" })).toBeVisible();
+  await expect(options.locator("html")).toHaveAttribute("lang", "zh-CN");
+  await expect(picker).toContainText("点击区域开始翻译");
+  if (process.env.CAPTURE_DEMO === "1")
+    await options.screenshot({ path: "test-results/options-zh.png", fullPage: true });
+  await expect(options.getByLabel("模型", { exact: true })).toHaveValue("unsaved-draft");
+  await expect(options.getByLabel("目标语言", { exact: true })).toHaveValue("简体中文");
+  const second = await context.newPage();
+  await second.goto(`${extensionOrigin}/options.html`);
+  await expect(second.getByRole("combobox", { name: "界面语言" })).toHaveText("简体中文");
+  await expect(second.getByLabel("模型", { exact: true })).not.toHaveValue("unsaved-draft");
+  await second.getByRole("combobox", { name: "界面语言" }).click();
+  await second.getByRole("option", { name: "English", exact: true }).click();
+  await expect(options.getByRole("heading", { name: "LingoFrame settings" })).toBeVisible();
+  await expect(options.getByLabel("Model", { exact: true })).toHaveValue("unsaved-draft");
+  if (process.env.CAPTURE_DEMO === "1")
+    await options.screenshot({ path: "test-results/options-en.png", fullPage: true });
+  await expect(picker).toContainText("Click a region");
+  await second.getByRole("combobox", { name: "Interface language" }).click();
+  await second.getByRole("option", { name: "Follow browser", exact: true }).click();
+  await options.getByRole("combobox", { name: /Interface language|界面语言/ }).click();
+  await expect(options.getByRole("option", { name: /Follow browser|跟随浏览器/ })).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
+  await options.keyboard.press("Escape");
+  await expect(
+    options.getByRole("combobox", { name: /Interface language|界面语言/ }),
+  ).toBeFocused();
+  const browserLanguage = await worker.evaluate(() => chrome.i18n.getUILanguage());
+  await expect(options.locator("html")).toHaveAttribute(
+    "lang",
+    /^zh/i.test(browserLanguage) ? "zh-CN" : "en",
+  );
+  await page.bringToFront();
+  await page.keyboard.press("Escape");
+  await options.close();
+  await second.close();
+});
+
+test("selects searched and custom target languages and preserves instruction drafts across reloads", async () => {
+  const page = await context.newPage();
+  await page.goto(`${extensionOrigin}/options.html`);
+  const input = page.getByLabel("Target language", { exact: true });
+  await input.fill("日本語");
+  await page.getByRole("option", { name: /Japanese/ }).click();
+  await expect(input).toHaveValue("Japanese");
+  await input.fill("Scottish Gaelic");
+  await page.getByRole("option", { name: "Use custom language: Scottish Gaelic" }).click();
+  await expect(input).toHaveValue("Scottish Gaelic");
+  await page.getByLabel("Custom", { exact: false }).check();
+  await page
+    .getByLabel("Custom translation instructions", { exact: true })
+    .fill("Keep interface names unchanged.");
+  await page.getByLabel("Built-in default", { exact: false }).check();
+  await page.getByRole("button", { name: "Save settings" }).click();
+  await expect(page.getByRole("status")).toHaveText("Settings saved");
+  await page.reload();
+  await expect(input).toHaveValue("Scottish Gaelic");
+  await page.getByLabel("Custom", { exact: false }).check();
+  await expect(page.getByLabel("Custom translation instructions", { exact: true })).toHaveValue(
+    "Keep interface names unchanged.",
+  );
+  await input.fill("简体中文");
+  await input.press("ArrowDown");
+  await input.press("Enter");
+  await expect(input).toHaveValue("Simplified Chinese");
+  await page.getByLabel("Built-in default", { exact: false }).check();
+  await page.getByRole("button", { name: "Save settings" }).click();
+  await expect(page.getByRole("status")).toHaveText("Settings saved");
+  await page.close();
+});
+
+test("validates fields and distinguishes testing from saving", async () => {
+  const page = await context.newPage();
+  await page.goto(`${extensionOrigin}/options.html`);
+  const model = page.getByLabel("Model", { exact: true });
+  await model.fill("");
+  await page.getByRole("button", { name: "Save settings" }).click();
+  await expect(model).toBeFocused();
+  await expect(model).toHaveAttribute("aria-invalid", "true");
+  await model.fill("slow-model");
+  await page.getByRole("button", { name: "Test configuration" }).click();
+  await expect(page.getByRole("button", { name: "Testing…" })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Save settings" })).toBeDisabled();
+  await expect(page.getByRole("status")).toHaveText(
+    "Configuration test succeeded. Settings have not been saved.",
+  );
+  await page.reload();
+  await expect(model).toHaveValue("mock-model");
+  await model.fill("http-error");
+  await page.getByRole("button", { name: "Test configuration" }).click();
+  await expect(page.getByRole("status")).toContainText("HTTP 401");
+  await page.getByRole("combobox", { name: "Interface language" }).click();
+  await page.getByRole("option", { name: "简体中文", exact: true }).click();
+  await expect(page.getByRole("status")).toContainText("服务返回 HTTP 401");
+  await page.getByRole("combobox", { name: "界面语言" }).click();
+  await page.getByRole("option", { name: "English", exact: true }).click();
+  await page.close();
+});
+
+test("renders formatted translations inside paragraph, list, and table boundaries", async () => {
+  const page = context.pages()[0]!;
+  await page.goto(`${origin}/formatted`);
+  await page.bringToFront();
+  await activatePicker();
+  await page.mouse.click(20, 20);
+  const region = page.locator("#formatted");
+  await expect(region.locator(".lingo-frame-bilingual-content")).toHaveCount(3);
+  const paragraph = region.locator("p > .lingo-frame-bilingual-content");
+  await expect(paragraph.locator("strong em")).toHaveText("指南");
+  await expect(paragraph.locator("code")).toHaveText("pnpm test");
+  await expect(paragraph.locator("a")).toHaveAttribute("href", "https://example.org/guide");
+  await expect(region.locator("li > .lingo-frame-bilingual-content strong")).toHaveText("项");
+  await expect(region.locator("td > .lingo-frame-bilingual-content em")).toHaveText("单元格");
+  if (process.env.CAPTURE_DEMO === "1")
+    await page.screenshot({ path: "docs/images/formatted-result.png" });
+});
+
+test("explains denied endpoint access while retaining the edited configuration", async () => {
+  const page = await context.newPage();
+  await page.goto(`${extensionOrigin}/options.html`);
+  await page.getByLabel("Model", { exact: true }).fill("permission-draft");
+  await page.evaluate(() => {
+    chrome.permissions.contains = async () => false;
+    chrome.permissions.request = async () => false;
+  });
+  await page.getByRole("button", { name: "Save settings" }).click();
+  await expect(page.getByRole("status")).toHaveText(
+    "Allow access to this API endpoint to use the provider.",
+  );
+  await expect(page.getByLabel("Model", { exact: true })).toHaveValue("permission-draft");
+  await page.reload();
+  await expect(page.getByLabel("Model", { exact: true })).toHaveValue("mock-model");
   await page.close();
 });

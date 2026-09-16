@@ -1,0 +1,303 @@
+msgid ""
+msgstr ""
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Language: en\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"Project-Id-Version: \n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: \n"
+"PO-Revision-Date: \n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"Content-Transfer-Encoding: \n"
+
+#. js-lingui-explicit-id
+#: src/shared/i18n.ts:115
+msgid "permissionDenied"
+msgstr "Allow access to this API endpoint to use the provider."
+
+#. js-lingui-explicit-id
+#: src/shared/i18n.ts:57
+msgid "baseUrl"
+msgstr "API base URL"
+
+#. js-lingui-explicit-id
+#: src/shared/i18n.ts:60
+msgid "apiKey"
+msgstr "API key"
+
+#. js-lingui-explicit-id
+#: src/shared/i18n.ts:34
+msgid "defaultMode"
+msgstr "Built-in default"
+
+#. js-lingui-explicit-id
+#: src/shared/i18n.ts:26
+msgid "chooseLanguage"
+msgstr "Choose or search a language"
+
+#. js-lingui-explicit-id
+#: src/shared/i18n.ts:51
+msgid "providerSubtitle"
+msgstr "Choose the service and model used for translation."
+
+#. js-lingui-explicit-id
+#: src/shared/i18n.ts:21
+msgid "behaviorSubtitle"
+msgstr "Choose the target language and how translations should read."
+
+#. js-lingui-explicit-id
+#: src/shared/i18n.ts:13
+msgid "settingsSubtitle"
+msgstr "Choose where translations come from and which language they should use."
+
+#. js-lingui-explicit-id
+#: src/shared/i18n.ts:125
+msgid "pickerHint"
+msgstr "Click a region to translate · Esc to cancel"
+
+#. js-lingui-explicit-id
+#: src/shared/i18n.ts:72
+msgid "tested"
+msgstr "Configuration test succeeded. Settings have not been saved."
+
+#. js-lingui-explicit-id
+#: src/shared/i18n.ts:119
+msgid "settingsError"
+msgstr "Could not load or save settings. Please try again."
+
+#. js-lingui-explicit-id
+#: src/shared/i18n.ts:103
+msgid "networkError"
+msgstr "Could not reach the provider. Check the endpoint and your connection."
+
+#. js-lingui-explicit-id
+#: src/shared/i18n.ts:39
+msgid "customMode"
+msgstr "Custom"
+
+#. js-lingui-explicit-id
+#: src/shared/i18n.ts:45
+msgid "customInstructions"
+msgstr "Custom translation instructions"
+
+#. js-lingui-explicit-id
+#: src/shared/i18n.ts:80
+msgid "required"
+msgstr "Enter a value for this field."
+
+#. js-lingui-explicit-id
+#: src/shared/i18n.ts:85
+msgid "missingApiKey"
+msgstr "Enter an API key in LingoFrame settings."
+
+#. js-lingui-explicit-id
+#: src/shared/i18n.ts:81
+msgid "invalidUrl"
+msgstr "Enter an HTTPS API URL, or a loopback HTTP URL."
+
+#. js-lingui-explicit-id
+#: src/shared/i18n.ts:18
+msgid "followBrowser"
+msgstr "Follow browser"
+
+#. js-lingui-explicit-id
+#: src/shared/i18n.ts:66
+msgid "hideKey"
+msgstr "Hide"
+
+#. js-lingui-explicit-id
+#: src/shared/i18n.ts:17
+msgid "interfaceLanguage"
+msgstr "Interface language"
+
+#. js-lingui-explicit-id
+#: src/shared/i18n.ts:129
+msgid "pageUnavailable"
+msgstr "LingoFrame cannot access this page"
+
+#. js-lingui-explicit-id
+#: src/shared/i18n.ts:124
+msgid "pickerTitle"
+msgstr "LingoFrame region picker"
+
+#. js-lingui-explicit-id
+#: src/shared/i18n.ts:12
+msgid "settingsTitle"
+msgstr "LingoFrame settings"
+
+#. js-lingui-explicit-id
+#: src/shared/i18n.ts:19
+msgid "loadingSettings"
+msgstr "Loading settings…"
+
+#. js-lingui-explicit-id
+#: src/shared/i18n.ts:59
+msgid "model"
+msgstr "Model"
+
+#. js-lingui-explicit-id
+#: src/shared/i18n.ts:126
+msgid "noText"
+msgstr "No readable text found in this region"
+
+#. js-lingui-explicit-id
+#: src/shared/i18n.ts:56
+msgid "compatible"
+msgstr "OpenAI-compatible"
+
+#. js-lingui-explicit-id
+#: src/shared/i18n.ts:55
+msgid "provider"
+msgstr "Provider"
+
+#. js-lingui-explicit-id
+#: src/shared/i18n.ts:67
+msgid "save"
+msgstr "Save settings"
+
+#. js-lingui-explicit-id
+#: src/shared/i18n.ts:68
+msgid "saving"
+msgstr "Saving…"
+
+#. js-lingui-explicit-id
+#: src/shared/i18n.ts:8
+msgid "brandTagline"
+msgstr "Select a region · Translate what matters"
+
+#. js-lingui-explicit-id
+#: src/shared/i18n.ts:128
+msgid "actionTitle"
+msgstr "Select a region to translate"
+
+#. js-lingui-explicit-id
+#: src/shared/i18n.ts:133
+msgid "extensionDescription"
+msgstr "Select a region. Translate what matters."
+
+#. js-lingui-explicit-id
+#: src/shared/i18n.ts:30
+msgid "instructionsDescription"
+msgstr "Set terminology, tone, audience, and writing style."
+
+#. js-lingui-explicit-id
+#: src/shared/i18n.ts:69
+msgid "saved"
+msgstr "Settings saved"
+
+#. js-lingui-explicit-id
+#: src/shared/i18n.ts:65
+msgid "showKey"
+msgstr "Show"
+
+#. js-lingui-explicit-id
+#: src/shared/i18n.ts:28
+msgid "openLanguages"
+msgstr "Show languages"
+
+#. js-lingui-explicit-id
+#: src/shared/i18n.ts:123
+msgid "unknownError"
+msgstr "Something went wrong. Please try again."
+
+#. js-lingui-explicit-id
+#: src/shared/i18n.ts:61
+msgid "keyHint"
+msgstr "Stored in this browser profile and used only with your chosen provider."
+
+#. js-lingui-explicit-id
+#: src/shared/i18n.ts:25
+msgid "targetLanguage"
+msgstr "Target language"
+
+#. js-lingui-explicit-id
+#: src/shared/i18n.ts:70
+msgid "test"
+msgstr "Test configuration"
+
+#. js-lingui-explicit-id
+#: src/shared/i18n.ts:71
+msgid "testing"
+msgstr "Testing…"
+
+#. js-lingui-explicit-id
+#: src/shared/i18n.ts:76
+msgid "privacy"
+msgstr "Text in the region you select is sent to your chosen provider."
+
+#. js-lingui-explicit-id
+#: src/shared/i18n.ts:89
+msgid "invalidResponse"
+msgstr "The provider returned an incomplete or unreadable translation. Try again or choose another model."
+
+#. js-lingui-explicit-id
+#: src/shared/i18n.ts:98
+msgid "httpError"
+msgstr "The provider returned HTTP {status}. Check the endpoint, credentials, and service limits."
+
+#. js-lingui-explicit-id
+#: src/shared/i18n.ts:111
+msgid "connectionClosed"
+msgstr "The translation connection closed. Select the region to try again."
+
+#. js-lingui-explicit-id
+#: src/shared/i18n.ts:107
+msgid "timeout"
+msgstr "The translation request timed out. Please try again."
+
+#. js-lingui-explicit-id
+#: src/shared/i18n.ts:94
+msgid "invalidSession"
+msgstr "This translation could not be started. Select the region again."
+
+#. js-lingui-explicit-id
+#: src/shared/i18n.ts:127
+msgid "translating"
+msgstr "Translating"
+
+#. js-lingui-explicit-id
+#: src/shared/i18n.ts:20
+msgid "behaviorTitle"
+msgstr "Translation behavior"
+
+#. js-lingui-explicit-id
+#: src/shared/i18n.ts:29
+msgid "instructions"
+msgstr "Translation instructions"
+
+#. js-lingui-explicit-id
+#: src/shared/i18n.ts:50
+msgid "providerTitle"
+msgstr "Translation provider"
+
+#. js-lingui-explicit-id
+#: src/shared/i18n.ts:49
+msgid "resetInstructions"
+msgstr "Use built-in default"
+
+#. js-lingui-explicit-id
+#: src/shared/i18n.ts:27
+msgid "customLanguage"
+msgstr "Use custom language: {name}"
+
+#. js-lingui-explicit-id
+#: src/shared/i18n.ts:58
+msgid "baseUrlHint"
+msgstr "Use HTTPS, or HTTP for a local service."
+
+#. js-lingui-explicit-id
+#: src/shared/i18n.ts:35
+msgid "defaultDescription"
+msgstr "Use the recommended translation preferences."
+
+#. js-lingui-explicit-id
+#: src/shared/i18n.ts:40
+msgid "customDescription"
+msgstr "Use your own translation preferences."
+
+#. js-lingui-explicit-id
+#: src/shared/i18n.ts:44
+msgid "viewInstructions"
+msgstr "View built-in instructions"

@@ -1,8 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type {
-  TranslationSessionCommand,
-  TranslationSessionEvent,
-} from "../src/shared/messages";
+import type { TranslationSessionCommand, TranslationSessionEvent } from "../src/shared/messages";
 
 const runtime = vi.hoisted(() => ({
   connect: vi.fn(),
@@ -81,9 +78,7 @@ afterEach(() => {
 describe("RegionTranslationSession", () => {
   it("groups a heading with its section and renders completed chunks immediately", async () => {
     document.body.innerHTML = progressiveArticle;
-    const session = new RegionTranslationSession(scanRegion(
-      document.querySelector("#selected")!,
-    ));
+    const session = new RegionTranslationSession(scanRegion(document.querySelector("#selected")!));
 
     const running = session.run();
     const start = port.posted[0];
@@ -193,9 +188,7 @@ describe("RegionTranslationSession", () => {
 
   it("merges short sections until the first feedback window is useful", async () => {
     document.body.innerHTML = shortSections;
-    const session = new RegionTranslationSession(scanRegion(
-      document.querySelector("#selected")!,
-    ));
+    const session = new RegionTranslationSession(scanRegion(document.querySelector("#selected")!));
 
     session.run();
     const start = port.posted[0];
@@ -209,9 +202,7 @@ describe("RegionTranslationSession", () => {
 
   it("caps each request at sixteen segments", async () => {
     document.body.innerHTML = segmentLimit;
-    const session = new RegionTranslationSession(scanRegion(
-      document.querySelector("#selected")!,
-    ));
+    const session = new RegionTranslationSession(scanRegion(document.querySelector("#selected")!));
 
     session.run();
     const start = port.posted[0];
@@ -225,9 +216,7 @@ describe("RegionTranslationSession", () => {
 
   it("keeps completed translations when a later chunk fails", async () => {
     document.body.innerHTML = partialFailureArticle;
-    const session = new RegionTranslationSession(scanRegion(
-      document.querySelector("#selected")!,
-    ));
+    const session = new RegionTranslationSession(scanRegion(document.querySelector("#selected")!));
 
     const running = session.run();
     const start = port.posted[0];
@@ -245,7 +234,7 @@ describe("RegionTranslationSession", () => {
     port.emit({
       type: "TRANSLATION_SESSION_FAILED",
       sessionId: start.sessionId,
-      error: "Translation API returned 429: rate limited",
+      error: { code: "httpError", status: 429 },
     });
     await running;
 

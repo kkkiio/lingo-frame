@@ -1,3 +1,4 @@
+import { TranslationError } from "../shared/errors";
 import { z } from "zod";
 import type { TranslationResult, TranslationSegment } from "../shared/messages";
 import type { Settings } from "../shared/settings";
@@ -5,13 +6,15 @@ import { getActiveProviderSettings } from "../shared/settings";
 import { createTranslationSystemPrompt } from "./prompt";
 
 const chatCompletionSchema = z.object({
-  choices: z.array(
-    z.object({
-      message: z.object({
-        content: z.string().nullable(),
+  choices: z
+    .array(
+      z.object({
+        message: z.object({
+          content: z.string().nullable(),
+        }),
       }),
-    }),
-  ).min(1),
+    )
+    .min(1),
 });
 
 const regionTranslationSchema = z.object({
@@ -32,17 +35,17 @@ export class ProviderTranslationSession {
     this.provider = getActiveProviderSettings(settings);
 
     if (!this.provider.apiKey.trim()) {
-      throw new Error("API key is not configured. Open LingoFrame settings first.");
+      throw new TranslationError({ code: "missingApiKey" });
     }
 
     const baseUrl = this.provider.baseUrl.replace(/\/+$/, "");
-    this.endpoint = baseUrl.endsWith("/chat/completions")
-      ? baseUrl
-      : `${baseUrl}/chat/completions`;
-    this.messages = [{
-      role: "system",
-      content: createTranslationSystemPrompt(settings),
-    }];
+    this.endpoint = baseUrl.endsWith("/chat/completions") ? baseUrl : `${baseUrl}/chat/completions`;
+    this.messages = [
+      {
+        role: "system",
+        content: createTranslationSystemPrompt(settings),
+      },
+    ];
   }
 
   async translateChunk(
@@ -53,13 +56,11 @@ export class ProviderTranslationSession {
     if (
       segments.length === 0 ||
       requestedIds.size !== segments.length ||
-      segments.some((segment) => (
-        !segment.id.trim() ||
-        !segment.unitId.trim() ||
-        !segment.text.trim()
-      ))
+      segments.some(
+        (segment) => !segment.id.trim() || !segment.unitId.trim() || !segment.text.trim(),
+      )
     ) {
-      throw new Error("LLM Session contains invalid Translation Segments");
+      throw new TranslationError({ code: "invalidSession" });
     }
 
     const userMessage: ChatMessage = {
@@ -88,15 +89,14 @@ export class ProviderTranslationSession {
     });
 
     if (!response.ok) {
-      const detail = (await response.text()).slice(0, 500).trim();
-      const reason = detail || response.statusText || "Unknown provider error";
-      throw new Error(`Translation API returned ${response.status}: ${reason}`);
+      await response.body?.cancel();
+      throw new TranslationError({ code: "httpError", status: response.status });
     }
 
     const payload = chatCompletionSchema.parse(await response.json());
     const content = payload.choices[0]?.message.content?.trim();
     if (!content) {
-      throw new Error("Translation API returned an empty response");
+      throw new TranslationError({ code: "invalidResponse" });
     }
 
     const parsed = regionTranslationSchema.parse(JSON.parse(content));
@@ -104,7 +104,7 @@ export class ProviderTranslationSession {
       parsed.translations.length !== segments.length ||
       parsed.translations.some((translation) => !translation.trim())
     ) {
-      throw new Error("Translation API returned the wrong number of translations");
+      throw new TranslationError({ code: "invalidResponse" });
     }
 
     const translations = segments.map(({ id }, index) => ({

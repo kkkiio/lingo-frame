@@ -14,7 +14,7 @@ LingoFrame 是一个小而清晰的 Chrome 区域翻译扩展：像 DevTools 元
 
 ## Installation
 
-准备 Node.js 20.19 或更高版本。克隆或下载本仓库后，可以从源码构建并加载未打包扩展：
+准备 Node.js 22.19 或更高版本。克隆或下载本仓库后，可以从源码构建并加载未打包扩展：
 
 ```bash
 cd lingo-frame
@@ -33,10 +33,12 @@ pnpm build
 
 1. 首次点击工具栏里的 LingoFrame 图标会自动打开设置页，也可以从扩展详情页进入“扩展程序选项”；
 2. 选择目标语言和 `DeepSeek` 或 `OpenAI-compatible` provider，填写 API Key、Base URL 与模型名；
-3. 点击 `Test connection` 验证配置，再保存；
+3. 点击“测试配置”（`Test configuration`）验证配置，再点击“保存设置”；
 4. 打开任意普通 HTTP/HTTPS 网页，点击工具栏里的 LingoFrame 图标，或按 `Alt+Shift+L`；
 5. 移动鼠标查看候选区域边界，点击一个区域开始翻译；
 6. 按 `Escape` 随时取消选择，再次点击扩展图标可以重新选择。
+
+设置页提供英文和简体中文，可跟随浏览器或手动切换。目标语言支持搜索和自定义输入；译文会保留原文中的粗体、斜体、行内代码和链接。
 
 Chrome 内部页面、Chrome Web Store 等浏览器保护页面不允许扩展注入内容脚本。跨域 iframe 也受浏览器隔离规则约束。
 

@@ -8,21 +8,61 @@
 import type { TranslationUnitRole } from "../../shared/messages";
 
 const DIRECT_TAGS = new Set([
-  "h1", "h2", "h3", "h4", "h5", "h6",
-  "p", "li", "dt", "dd", "blockquote", "figcaption",
-  "td", "th", "caption",
+  "h1",
+  "h2",
+  "h3",
+  "h4",
+  "h5",
+  "h6",
+  "p",
+  "li",
+  "dt",
+  "dd",
+  "blockquote",
+  "figcaption",
+  "td",
+  "th",
+  "caption",
 ]);
 
 const SKIP_TAGS = new Set([
-  "script", "style", "noscript", "template", "iframe",
-  "input", "textarea", "select", "option", "button",
-  "pre", "svg", "canvas",
+  "script",
+  "style",
+  "noscript",
+  "template",
+  "iframe",
+  "input",
+  "textarea",
+  "select",
+  "option",
+  "button",
+  "pre",
+  "svg",
+  "canvas",
 ]);
 
 const INLINE_TAGS = new Set([
-  "a", "abbr", "b", "bdi", "bdo", "br", "cite", "code", "em", "i",
-  "img", "mark", "q", "small", "span", "strong", "sub", "sup",
-  "time", "u", "wbr",
+  "a",
+  "abbr",
+  "b",
+  "bdi",
+  "bdo",
+  "br",
+  "cite",
+  "code",
+  "em",
+  "i",
+  "img",
+  "mark",
+  "q",
+  "small",
+  "span",
+  "strong",
+  "sub",
+  "sup",
+  "time",
+  "u",
+  "wbr",
 ]);
 
 const ROLE_BY_TAG: ReadonlyMap<string, TranslationUnitRole> = new Map([
@@ -36,10 +76,16 @@ const ROLE_BY_TAG: ReadonlyMap<string, TranslationUnitRole> = new Map([
   ["figcaption", "caption"],
 ]);
 
+export interface RegionTextRun {
+  text: string;
+  ancestors: HTMLElement[];
+}
+
 export interface RegionTranslationUnit {
   id: string;
   element: HTMLElement;
   text: string;
+  runs: RegionTextRun[];
   role: TranslationUnitRole;
   startsChunk: boolean;
   slot: {
@@ -73,7 +119,12 @@ export function scanRegion(root: Element): RegionTranslationUnit[] {
       if (style.display === "none" || style.visibility === "hidden" || style.opacity === "0") {
         return NodeFilter.FILTER_REJECT;
       }
-      if (tag === "code" && style.display && style.display !== "contents" && !style.display.startsWith("inline")) {
+      if (
+        tag === "code" &&
+        style.display &&
+        style.display !== "contents" &&
+        !style.display.startsWith("inline")
+      ) {
         return NodeFilter.FILTER_REJECT;
       }
 
@@ -87,7 +138,8 @@ export function scanRegion(root: Element): RegionTranslationUnit[] {
         return NodeFilter.FILTER_SKIP;
       }
 
-      const isInline = INLINE_TAGS.has(tag) || style.display === "contents" || style.display.startsWith("inline");
+      const isInline =
+        INLINE_TAGS.has(tag) || style.display === "contents" || style.display.startsWith("inline");
       if (!isInline) {
         candidates.push(node);
       }
@@ -101,22 +153,23 @@ export function scanRegion(root: Element): RegionTranslationUnit[] {
   }
 
   const uniqueCandidates = Array.from(new Set(candidates));
-  const owners = root instanceof HTMLElement
-    ? Array.from(new Set([root, ...uniqueCandidates]))
-    : uniqueCandidates;
+  const owners =
+    root instanceof HTMLElement
+      ? Array.from(new Set([root, ...uniqueCandidates]))
+      : uniqueCandidates;
   const ownerSet = new Set(owners);
   const units: RegionTranslationUnit[] = [];
   const startedHeadings = new Set<HTMLElement>();
 
   for (const owner of owners) {
     const closestHeading = owner.closest<HTMLElement>("h1, h2, h3, h4, h5, h6");
-    const heading = closestHeading && (
-      closestHeading === root || root.contains(closestHeading)
-    ) ? closestHeading : null;
-    const role = heading
-      ? "heading"
-      : ROLE_BY_TAG.get(owner.tagName.toLowerCase()) ?? "text";
+    const heading =
+      closestHeading && (closestHeading === root || root.contains(closestHeading))
+        ? closestHeading
+        : null;
+    const role = heading ? "heading" : (ROLE_BY_TAG.get(owner.tagName.toLowerCase()) ?? "text");
     const textParts: string[] = [];
+    const textRuns: RegionTextRun[] = [];
     let lastTextNode: Text | null = null;
     let consecutiveBreaks = 0;
     let startsChunk = false;
@@ -137,17 +190,22 @@ export function scanRegion(root: Element): RegionTranslationUnit[] {
             const style = getComputedStyle(current);
             const isSelectedPreformattedText = tag === "pre" && current === owner;
             const containingPre = tag === "code" ? current.closest("pre") : null;
-            const isCodeBlock = tag === "code" && current !== root && (
-              (containingPre && root.contains(containingPre)) ||
-              (style.display && style.display !== "contents" && !style.display.startsWith("inline"))
-            );
+            const isCodeBlock =
+              tag === "code" &&
+              current !== root &&
+              ((containingPre && root.contains(containingPre)) ||
+                (style.display &&
+                  style.display !== "contents" &&
+                  !style.display.startsWith("inline")));
             if (
               (current !== owner && ownerSet.has(current)) ||
               (SKIP_TAGS.has(tag) && !isSelectedPreformattedText) ||
               isCodeBlock ||
               current.hidden ||
               current.getAttribute("aria-hidden") === "true" ||
-              current.matches("[contenteditable=''], [contenteditable='true'], .notranslate, .sr-only") ||
+              current.matches(
+                "[contenteditable=''], [contenteditable='true'], .notranslate, .sr-only",
+              ) ||
               current.closest("[data-lingo-frame-ui]") ||
               current.hasAttribute("data-lingo-frame-translated") ||
               style.display === "none" ||
@@ -170,6 +228,17 @@ export function scanRegion(root: Element): RegionTranslationUnit[] {
     while (textWalker.nextNode()) {
       const current = textWalker.currentNode;
       if (current instanceof Text) {
+        if (current.textContent?.trim() || textParts.length > 0) {
+          const ancestors: HTMLElement[] = [];
+          let parent = current.parentElement;
+          while (parent) {
+            if (["strong", "b", "em", "i", "code", "a"].includes(parent.localName))
+              ancestors.unshift(parent);
+            if (parent === owner) break;
+            parent = parent.parentElement;
+          }
+          textRuns.push({ text: current.textContent ?? "", ancestors });
+        }
         if (!current.textContent?.trim()) {
           if (textParts.length > 0) {
             textParts.push(current.textContent ?? "");
@@ -194,6 +263,7 @@ export function scanRegion(root: Element): RegionTranslationUnit[] {
           id: `unit-${units.length}`,
           element: owner,
           text,
+          runs: textRuns.slice(),
           role,
           startsChunk: startsChunk || startsAtHeading,
           slot: { parent: current.parentNode, before: current as ChildNode },
@@ -203,6 +273,7 @@ export function scanRegion(root: Element): RegionTranslationUnit[] {
         }
       }
       textParts.length = 0;
+      textRuns.length = 0;
       hasProse = false;
       lastTextNode = null;
       startsChunk = false;
@@ -224,6 +295,7 @@ export function scanRegion(root: Element): RegionTranslationUnit[] {
         id: `unit-${units.length}`,
         element: owner,
         text,
+        runs: textRuns.slice(),
         role,
         startsChunk: startsChunk || startsAtHeading,
         slot: { parent: owner, before },

@@ -1,5 +1,6 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { expect, test, vi } from "vitest";
+import { serializeTranslationUnit } from "../../src/content/region/markdown";
 import { scanRegion } from "../../src/content/region/scan-region";
 import { DEFAULT_SETTINGS } from "../../src/shared/settings";
 import { ProviderTranslationSession } from "../../src/translation/provider";
@@ -13,12 +14,15 @@ test("translates inline commands with DeepSeek across two turns", async () => {
   const settings = structuredClone(DEFAULT_SETTINGS);
   settings.providers.deepseek.apiKey = apiKey;
   document.body.innerHTML = article;
-  const segments = scanRegion(document.querySelector("#selected")!).map(({ id, role, text }) => ({
-    id: `${id}:segment-0`,
-    unitId: id,
-    role,
-    text,
-  }));
+  const linkIds = new Map<HTMLElement, string>();
+  const segments = scanRegion(document.querySelector("#selected")!).flatMap((unit) =>
+    serializeTranslationUnit(unit, linkIds).map((part, index) => ({
+      id: `${unit.id}:segment-${index}`,
+      unitId: unit.id,
+      role: unit.role,
+      text: part.markdown,
+    })),
+  );
   const requests: unknown[] = [];
   const fetch = globalThis.fetch.bind(globalThis);
   const capture = vi.spyOn(globalThis, "fetch").mockImplementation((url, init) => {
@@ -32,13 +36,20 @@ test("translates inline commands with DeepSeek across two turns", async () => {
     const second = await session.translateChunk(segments.slice(2), AbortSignal.timeout(45_000));
     const translations = [...first, ...second];
     await mkdir("test-results", { recursive: true });
-    await writeFile("test-results/deepseek-live.json", JSON.stringify({
-      requests,
-      translations: segments.map((segment, index) => ({
-        source: segment.text,
-        translation: translations[index]?.text,
-      })),
-    }, null, 2) + "\n");
+    await writeFile(
+      "test-results/deepseek-live.json",
+      JSON.stringify(
+        {
+          requests,
+          translations: segments.map((segment, index) => ({
+            source: segment.text,
+            translation: translations[index]?.text,
+          })),
+        },
+        null,
+        2,
+      ) + "\n",
+    );
 
     expect(translations.map(({ id }) => id)).toEqual(segments.map(({ id }) => id));
     expect(first[1]?.text).toContain("/plan");

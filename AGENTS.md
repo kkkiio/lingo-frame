@@ -1,4 +1,34 @@
-# AGENTS.md
+# LingoFrame AGENTS.md
+
+## Project Structure Guide
+
+### Repo Structure & Important Files
+
+```text
+lingo-frame/
+├── entrypoints/
+│   ├── background.ts             # 工具栏入口、可信翻译请求与取消控制
+│   ├── content.ts                # Picker → scan → session 的页面控制器
+│   └── options/                  # Provider、目标语言与凭据设置页
+├── src/
+│   ├── content/
+│   │   ├── picker/               # iframe 隔离高亮层与深层元素命中
+│   │   └── region/               # Region 文本扫描和 FluentRead 式双语展示
+│   ├── locales/                  # Lingui 英文、简体中文 PO 目录
+│   ├── shared/                   # 消息协议、Zod 设置模型与本地存储
+│   └── translation/              # OpenAI-compatible provider transport
+├── tests/                        # 文本扫描、设置和 provider 单元测试
+├── e2e/                          # 真实 Chromium 扩展交互测试与 README 截图源
+├── public/icons/                 # Chrome manifest 图标和矢量源文件
+├── docs/images/                  # 经 E2E 生成并人工核验的产品截图
+├── docs/adr/                     # LLM Session、分片等长期工程决策
+├── lingui.config.ts              # 文案提取与目录配置
+├── wxt.config.ts                 # MV3 权限、命令、图标和构建差异
+├── UPSTREAM.md                   # FluentRead 基线与 Region Picker 参考归属
+└── LICENSE                       # GPL-3.0-only 全文
+```
+
+入口层只负责生命周期编排。Region Picker 不读取翻译配置，scanner 不发网络请求，content script 不接触 API Key，provider 不操作页面 DOM。
 
 ## Domain Language
 
@@ -18,35 +48,9 @@
 - 生产 manifest 保持 `activeTab` 按需注入，provider 网络访问使用用户操作触发的 optional host permission。
 - 修改 Picker、事件拦截、manifest 权限或 content/background 消息边界时，必须运行真实 Chromium 端到端测试。
 
-## Project Structure Guide
-
-```text
-lingo-frame/
-├── entrypoints/
-│   ├── background.ts             # 工具栏入口、可信翻译请求与取消控制
-│   ├── content.ts                # Picker → scan → session 的页面控制器
-│   └── options/                  # Provider、目标语言与凭据设置页
-├── src/
-│   ├── content/
-│   │   ├── picker/               # iframe 隔离高亮层与深层元素命中
-│   │   └── region/               # Region 文本扫描和 FluentRead 式双语展示
-│   ├── shared/                   # 消息协议、Zod 设置模型与本地存储
-│   └── translation/              # OpenAI-compatible provider transport
-├── tests/                        # 文本扫描、设置和 provider 单元测试
-├── e2e/                          # 真实 Chromium 扩展交互测试与 README 截图源
-├── public/icons/                 # Chrome manifest 图标和矢量源文件
-├── docs/images/                  # 经 E2E 生成并人工核验的产品截图
-├── docs/adr/                     # LLM Session、分片等长期工程决策
-├── wxt.config.ts                 # MV3 权限、命令、图标和构建差异
-├── UPSTREAM.md                   # FluentRead 基线与 Region Picker 参考归属
-└── LICENSE                       # GPL-3.0-only 全文
-```
-
-入口层只负责生命周期编排。Region Picker 不读取翻译配置，scanner 不发网络请求，content script 不接触 API Key，provider 不操作页面 DOM。
-
 ## Operation Guide
 
-使用 Node.js 20.19 或更高版本。首次进入仓库后运行 `corepack pnpm install --frozen-lockfile`，WXT 会通过 `prepare` 生成 `.wxt` 类型文件。
+使用 Node.js 22.19 或更高版本。首次进入仓库后运行 `corepack pnpm install --frozen-lockfile`，WXT 会通过 `prepare` 生成 `.wxt` 类型文件。
 
 常用命令：
 
@@ -55,7 +59,7 @@ pnpm dev          # 启动 WXT Chrome 开发构建
 pnpm typecheck    # 运行 Vue/TypeScript 静态检查
 pnpm test         # 运行 Vitest 单元测试
 pnpm e2e          # 构建 E2E manifest 并在真实 Chromium 中测试扩展
-pnpm check        # 依次运行类型检查、单元测试和生产构建
+pnpm check        # 依次运行文案校验、类型检查、单元测试和生产构建
 pnpm build        # 输出生产扩展到 output/chrome-mv3
 pnpm zip          # 生成可分发压缩包
 ```
@@ -63,3 +67,5 @@ pnpm zip          # 生成可分发压缩包
 `pnpm e2e` 会生成 `output/chrome-mv3-e2e`，其中只为本地测试服务器加入 `http://127.0.0.1/*` host permission；生产构建会删除 WXT 为 runtime content script 推导出的持久 host permission，并依赖 `activeTab` 注入。
 
 README 截图来自端到端固定页面；只有在交互或展示确实变化时才运行 `CAPTURE_DEMO=1 pnpm e2e` 并查看 `docs/images/region-picker.png` 与 `docs/images/bilingual-result.png`。
+
+修改界面文案后运行 `pnpm i18n:extract`，在 `src/locales/zh-CN/messages.po` 补全翻译；`pnpm check` 会检查漏译并编译目录。修改 Markdown 提取或展示时运行 `pnpm e2e`；使用已配置的测试凭据运行 `pnpm test:live` 可生成真实模型的格式对照结果。
