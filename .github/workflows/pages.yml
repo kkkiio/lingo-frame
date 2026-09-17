@@ -1,0 +1,40 @@
+name: Publish website
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "website/**"
+      - "public/icons/lingoframe.svg"
+      - ".github/workflows/pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: github-pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/configure-pages@v5
+      - name: Prepare website
+        run: |
+          mkdir -p output/website/assets
+          cp website/index.html website/style.css website/demo.js output/website/
+          cp public/icons/lingoframe.svg output/website/assets/
+          touch output/website/.nojekyll
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: output/website
+      - uses: actions/deploy-pages@v4
+        id: deployment

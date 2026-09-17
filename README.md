@@ -4,60 +4,31 @@
 
 ![LingoFrame 的区域选择器](docs/images/region-picker.png)
 
-LingoFrame 是一个小而清晰的 Chrome 区域翻译扩展：像 DevTools 元素选择器一样指向页面中的内容区域，点击后只翻译该 DOM 容器里的可读文字。
+LingoFrame 是一款 Chrome 网页区域翻译扩展。点击你想读的文章、评论或讨论，即可在原文下方查看中文译文。
 
-> **Select a region. Translate what matters.**
-
-它适合文章正文、评论、帖子、聊天消息、表格单元格、文档段落、侧边栏和卡片等场景。原文会保留在页面中，译文默认用双语展示方式紧跟在对应原文下方。
+[English](README_en.md) · [三步上手演示](https://kkkiio.github.io/lingo-frame/)
 
 ![LingoFrame 的页内双语译文](docs/images/bilingual-result.png)
 
 ## Installation
 
-准备 Node.js 22.19 或更高版本。克隆或下载本仓库后，可以从源码构建并加载未打包扩展：
+[从 Chrome 应用商店安装 LingoFrame](https://chromewebstore.google.com/detail/lingoframe/keapjhhlniaecddikklclkmbgkllmmmn?hl=zh-CN)，点击“添加至 Chrome”。
 
-```bash
-cd lingo-frame
-corepack pnpm install --frozen-lockfile
-pnpm build
-```
-
-然后在 Chrome 中完成安装：
-
-1. 打开 `chrome://extensions`；
-2. 开启右上角的“开发者模式”；
-3. 点击“加载已解压的扩展程序”；
-4. 选择项目中的 `output/chrome-mv3` 目录。
+安装后，在 Chrome 工具栏的“扩展程序”菜单中固定 LingoFrame，方便随时使用。
 
 ## Usage
 
-1. 首次点击工具栏里的 LingoFrame 图标会自动打开设置页，也可以从扩展详情页进入“扩展程序选项”；
-2. 选择目标语言和 `DeepSeek` 或 `OpenAI-compatible` provider，填写 API Key、Base URL 与模型名；
-3. 点击“测试配置”（`Test configuration`）验证配置，再点击“保存设置”；
-4. 打开任意普通 HTTP/HTTPS 网页，点击工具栏里的 LingoFrame 图标，或按 `Alt+Shift+L`；
-5. 移动鼠标查看候选区域边界，点击一个区域开始翻译；
-6. 按 `Escape` 随时取消选择，再次点击扩展图标可以重新选择。
+1. **配置 API Key**：首次点击 LingoFrame 图标会打开设置页。选择 DeepSeek，填入自己的 API Key，点击“保存设置”并允许连接该服务。也可以使用其他兼容 OpenAI 的翻译服务。
+2. **点击扩展**：打开想读的网页，点击工具栏里的 LingoFrame 图标，或按 `Alt+Shift+L`。
+3. **选中区域**：将鼠标移到想翻译的内容上，点击确认。译文会逐段出现在原文下方；按 `Esc` 可取消选择。
 
-设置页提供英文和简体中文，可跟随浏览器或手动切换。目标语言支持搜索和自定义输入；译文会保留原文中的粗体、斜体、行内代码和链接。
+默认翻译为简体中文，也可以在设置中选择其他语言。API Key 是翻译服务提供的访问密钥，需要从对应服务获取；扩展免费，翻译服务可能按用量收费。
 
-Chrome 内部页面、Chrome Web Store 等浏览器保护页面不允许扩展注入内容脚本。跨域 iframe 也受浏览器隔离规则约束。
-
-可识别的页面内容、主动跳过的内容和已验证案例请参阅[内容识别范围](docs/content-recognition.md)。
-
-远程 API 端点必须使用 HTTPS；为兼容本机模型服务，`localhost`、`127.0.0.1` 和 `[::1]` 可以使用 HTTP。
-
-## What it includes
-
-- DevTools 风格的 DOM Region Picker，带悬停高亮、点击拦截、滚动/缩放重定位与 `Escape` 清理；
-- 限定在所选 DOM 容器内的可读文本扫描，不会向父级或页面其他区域扩张；
-- 与 FluentRead 一致的页内双语展示模型，以及逐段加载和失败原因；
-- DeepSeek 与 OpenAI Chat Completions-compatible API，共用一个可扩展的 provider 边界；
-- 目标语言、模型、端点与 API Key 的本地扩展存储；
-- Manifest V3 的 `activeTab` 按需注入，只为用户配置的 API origin 请求可选网络权限。
+Chrome 设置页和应用商店页面无法翻译，请在普通网页上使用。
 
 ## Privacy
 
-LingoFrame 只会把用户明确选中区域中的文字发送给已配置的翻译 provider。API Key 保存在当前 Chrome profile 的扩展本地存储中，并限制为扩展可信上下文可读；页面脚本无法直接读取它。
+你选中区域中的文字会直接发送给你选择的翻译服务。API Key 和设置保存在当前浏览器中。
 
 完整的数据处理、权限用途与删除方式请参阅 [Privacy Policy](PRIVACY.md)。
 

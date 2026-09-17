@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="LingoFrame 是一款 Chrome 网页区域翻译扩展。配置 API Key，点击扩展，选中区域，在原文下方阅读中文译文。" />
+    <meta name="theme-color" content="#f36d4d" />
+    <title>LingoFrame — 只翻译你想读的那一段</title>
+    <link rel="icon" href="./assets/lingoframe.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="./style.css" />
+    <script src="./demo.js" defer></script>
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="./" aria-label="LingoFrame 首页"><img src="./assets/lingoframe.svg" width="36" height="36" alt="" />LingoFrame</a>
+      <a class="source-link" href="https://github.com/kkkiio/lingo-frame">GitHub <span aria-hidden="true">↗</span></a>
+    </header>
+
+    <main id="walkthrough" data-step="1" data-translated="false">
+      <div class="intro">
+        <p class="eyebrow">为中英对照阅读而做</p>
+        <h1>只翻译你想读的<br /><span>那一段。</span></h1>
+        <p class="lead">文章、评论、讨论。选中一块内容，<br class="desktop-break" />让中文译文接在原文下面。</p>
+        <a class="install" href="https://chromewebstore.google.com/detail/lingoframe/keapjhhlniaecddikklclkmbgkllmmmn?hl=zh-CN">添加至 Chrome <span aria-hidden="true">↗</span></a>
+        <p class="install-note">扩展免费 · 自备 API Key</p>
+
+        <nav class="steps" aria-label="使用演示步骤">
+          <button class="step" type="button" data-step="1" aria-pressed="true" aria-controls="demo-screen">
+            <span class="step-number">01</span><span><strong>配置 API Key</strong><span class="step-detail">首次打开设置，填入密钥并保存。</span></span>
+          </button>
+          <button class="step" type="button" data-step="2" aria-pressed="false" aria-controls="demo-screen">
+            <span class="step-number">02</span><span><strong>点击扩展</strong><span class="step-detail">打开想读的网页，点击工具栏图标。</span></span>
+          </button>
+          <button class="step" type="button" data-step="3" aria-pressed="false" aria-controls="demo-screen">
+            <span class="step-number">03</span><span><strong>选中区域</strong><span class="step-detail">点击想翻译的内容，开始对照阅读。</span></span>
+          </button>
+        </nav>
+      </div>
+
+      <div class="demo-column">
+        <div class="demo-heading"><span>试着点一点</span><span class="demo-label">交互演示</span></div>
+        <div class="browser" id="demo-screen" role="region" aria-label="三步使用演示">
+          <div class="browser-tabs"><span class="window-dots" aria-hidden="true"><i></i><i></i><i></i></span><span class="tab-label">LingoFrame</span></div>
+          <div class="browser-toolbar">
+            <span class="back-arrow" aria-hidden="true">←</span>
+            <span class="address"><span class="settings-address">LingoFrame 设置</span><span class="article-address">阅读一篇文章</span></span>
+            <button class="toolbar-icon" type="button" data-advance="3" disabled aria-label="点击 LingoFrame 扩展图标"><img src="./assets/lingoframe.svg" width="28" height="28" alt="" /></button>
+          </div>
+
+          <section class="settings-scene" aria-label="设置示意">
+            <div class="settings-brand"><img src="./assets/lingoframe.svg" alt="" width="40" height="40" /><div><strong>LingoFrame</strong><span>选择区域，翻译你关心的内容。</span></div></div>
+            <div class="settings-form">
+              <div class="display-field"><span>翻译服务</span><div>DeepSeek <span aria-hidden="true">⌄</span></div></div>
+              <div class="display-field"><span>目标语言</span><div>简体中文 <span aria-hidden="true">⌄</span></div></div>
+              <div class="display-field key-field"><span>API Key</span><div><span class="key-dots" aria-label="已隐藏的示例密钥">••••••••••••••••••••</span></div></div>
+              <button class="save-demo" data-advance="2" type="button">保存设置 <span aria-hidden="true">→</span></button>
+            </div>
+            <p class="scene-note">在扩展设置页填写你自己的密钥。</p>
+          </section>
+
+          <section class="article-scene" aria-label="网页翻译示意" hidden>
+            <div class="article-meta"><span>READING NOTES</span><span>3 min read</span></div>
+            <button class="article-region" type="button" data-translate aria-label="选中这段文章并显示中文译文" disabled>
+              <span class="selection-label">点击翻译这个区域</span>
+              <span class="article-title">A little more understanding.</span>
+              <span class="translation translated-title" lang="zh-CN">多读懂一点。</span>
+              <span class="article-copy" lang="en">You don't need to translate the whole page. Sometimes, one paragraph is all you need to keep reading.</span>
+              <span class="translation" lang="zh-CN">不必翻译整个网页。有时，读懂一段，就能接着读下去。</span>
+              <span class="article-copy" lang="en">Keep the original close, and let a new language open up the meaning.</span>
+              <span class="translation" lang="zh-CN">让原文留在身旁，换一种语言，读懂其中的意思。</span>
+            </button>
+            <div class="article-end"><span aria-hidden="true">—</span> A small pause. A new perspective.</div>
+            <div class="toolbar-hint" aria-hidden="true">点击上方橙色图标 <span>↑</span></div>
+          </section>
+        </div>
+        <div class="demo-caption"><p id="demo-status" role="status">01 / 先填入 API Key，再点击“保存设置”。</p><button type="button" class="replay" data-reset hidden>再看一次 <span aria-hidden="true">↺</span></button></div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <p>还没有 API Key？<a href="https://platform.deepseek.com/api_keys">前往 DeepSeek 获取 <span aria-hidden="true">↗</span></a><span class="fee-note">翻译服务可能按用量收费。</span></p>
+      <a href="https://github.com/kkkiio/lingo-frame/blob/main/PRIVACY.md">隐私说明</a>
+    </footer>
+  </body>
+</html>
