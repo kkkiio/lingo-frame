@@ -5,9 +5,9 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import {
-  SEGMENT_SEPARATORS,
+  SEGMENT_SEPARATOR,
   encodeSegments,
-  readSegmentSeparator,
+  isSegmentMessage,
   splitSegments,
 } from "../src/translation/segment-protocol";
 
@@ -29,21 +29,16 @@ let profilePath: string;
 let extensionOrigin: string;
 let providerRequests: Array<{
   body: Record<string, unknown>;
-  separator: string;
   segments: Array<{ text: string }>;
   messages: Array<{ role: string; content: string }>;
 }> = [];
 
 // ADR-0003: the user message is plain text whose first line declares the separator.
-function decodeSegmentRequest(content: string): {
-  separator: string;
-  segments: Array<{ text: string }>;
-} {
-  const separator = readSegmentSeparator(content);
-  if (!separator) {
+function decodeSegmentRequest(content: string): { segments: Array<{ text: string }> } {
+  if (!isSegmentMessage(content)) {
     throw new Error(`Request does not declare a segment separator: ${content.slice(0, 80)}`);
   }
-  return { separator, segments: splitSegments(content, separator).map((text) => ({ text })) };
+  return { segments: splitSegments(content).map((text) => ({ text })) };
 }
 
 test.beforeAll(async () => {
@@ -65,7 +60,6 @@ test.beforeAll(async () => {
         const providerRequest = decodeSegmentRequest(payload.messages.at(-1).content);
         providerRequests.push({
           body: payload,
-          separator: providerRequest.separator,
           segments: providerRequest.segments,
           messages: payload.messages,
         });
@@ -122,7 +116,6 @@ test.beforeAll(async () => {
                         (segment: { text: string }) =>
                           translations[segment.text] ?? `译文：${segment.text}`,
                       ),
-                      providerRequest.separator,
                     ),
                   },
                 },
@@ -537,9 +530,9 @@ test("progressively translates a ClaudeFast-style structured article", async () 
     "user",
   ]);
   expect(
-    splitSegments(secondRequest.messages[1]!.content, secondRequest.separator),
+    splitSegments(secondRequest.messages[1]!.content),
   ).toEqual(providerRequests.at(-2)?.segments.map(({ text }) => text));
-  expect(readSegmentSeparator(secondRequest.messages[2]!.content)).toBe(secondRequest.separator);
+  expect(isSegmentMessage(secondRequest.messages[2]!.content)).toBe(true);
   expect(secondRequest.segments.map(({ text }) => text)).toEqual([
     "Second section",
     "Section paragraph",
@@ -582,23 +575,19 @@ test("translates a SemiAnalysis article excerpt with the plain-text segment prot
   const requests = providerRequests.slice(requestCount);
   const sourceSegments: string[] = [];
   for (const request of requests) {
-    // ADR-0003: no JSON envelope and no response_format; every chunk declares its separator.
+    // ADR-0003: no JSON envelope and no response_format; every chunk declares the separator.
     expect(request.body).not.toHaveProperty("response_format");
     const content = request.messages.at(-1)!.content;
     expect(content).not.toContain('"segments"');
     expect(content).not.toContain('"translations"');
-    expect(content.startsWith(request.separator)).toBe(true);
-    expect(content.split(request.separator)).toHaveLength(request.segments.length + 1);
-    let declared = "";
+    expect(isSegmentMessage(content)).toBe(true);
+    expect(content.split(SEGMENT_SEPARATOR)).toHaveLength(request.segments.length + 1);
     for (const message of request.messages) {
-      if (message.role === "user") {
-        declared = readSegmentSeparator(message.content)!;
-      }
       if (message.role === "assistant") {
-        expect(readSegmentSeparator(message.content)).toBe(declared);
+        expect(isSegmentMessage(message.content)).toBe(true);
       }
     }
-    sourceSegments.push(...splitSegments(content, request.separator));
+    sourceSegments.push(...splitSegments(content));
   }
 
   // Chunking happens across requests, but every segment travels exactly once, in order.

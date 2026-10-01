@@ -4,7 +4,7 @@ import type { TranslationResult, TranslationSegment } from "../shared/messages";
 import type { Settings } from "../shared/settings";
 import { getActiveProviderSettings } from "../shared/settings";
 import { createTranslationSystemPrompt } from "./prompt";
-import { encodeSegments, parseTranslations, selectSegmentSeparator } from "./segment-protocol";
+import { encodeSegments, parseTranslations } from "./segment-protocol";
 
 const chatCompletionSchema = z.object({
   choices: z
@@ -60,13 +60,9 @@ export class ProviderTranslationSession {
       throw new TranslationError({ code: "invalidSession" });
     }
 
-    const separator = selectSegmentSeparator(segments.map(({ text }) => text));
     const userMessage: ChatMessage = {
       role: "user",
-      content: encodeSegments(
-        segments.map(({ text }) => text),
-        separator,
-      ),
+      content: encodeSegments(segments.map(({ text }) => text)),
     };
     const requestBody: Record<string, unknown> = {
       model: this.provider.model,
@@ -97,7 +93,7 @@ export class ProviderTranslationSession {
       throw new TranslationError({ code: "invalidResponse" });
     }
 
-    const parsed = parseTranslations(content, segments.length, separator);
+    const parsed = parseTranslations(content, segments.length);
     if (!parsed) {
       throw new TranslationError({ code: "invalidResponse" });
     }
@@ -108,10 +104,7 @@ export class ProviderTranslationSession {
     }));
     this.messages.push(userMessage, {
       role: "assistant",
-      content: encodeSegments(
-        translations.map(({ text }) => text),
-        separator,
-      ),
+      content: encodeSegments(translations.map(({ text }) => text)),
     });
     return translations;
   }

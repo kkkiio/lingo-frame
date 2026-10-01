@@ -74,7 +74,7 @@ assistant turn
   我们的 DeepSeek-V4.1-Flash 配置……
 ```
 
-分隔符出现在每个 Segment 之前，因此 N 个 Segment 对应 N 个分隔符，请求与回复形状对称。第一条分隔符同时充当声明：即使某个 Chunk 只有一个 Segment，模型也能从 user message 本身看到应该复制哪个字面量，不依赖 system message 里的固定样例。system message 只描述规则并禁止编号、前言、后记和额外标记，不给出可能与实际分隔符混淆的字面量示例。译文内部的换行与空行是合法内容。
+分隔符出现在每个 Segment 之前，因此 N 个 Segment 对应 N 个分隔符，请求与回复形状对称。system message 直接写出 `<<<LFSEG>>>`，user message 再逐段重复一次，模型不需要推断、不需要计数。译文内部的换行与空行是合法内容。
 
 ### 分隔符与碰撞
 
@@ -82,9 +82,11 @@ assistant turn
 
 - `<|...|>` 形状属于 DeepSeek 的特殊 token 家族，不能用；
 - `---` 与 Markdown 分隔线冲突，`###` 与标题冲突，`%%` 会出现在讨论格式化的行内代码里；
-- 采用 `<<<LFSEG>>>`，并准备少量候选。
+- 采用 `<<<LFSEG>>>`，写成单一常量。
 
-Segment 中的行内代码会原样发送，理论上仍可能包含该字面量。发送一个 Chunk 前检查其全部文本，命中则按候选表替换成本次请求使用的分隔符；该 Chunk 的 assistant 回填沿用同一分隔符。
+分隔符是全局常量，由 system message 逐字写出，不按请求切换。备选方案是在发送前检查 Chunk 文本、命中就换成候选表中的另一个分隔符，但 system message 在一次 Translation Session 内只构建一次，早于任何 Chunk 到达，写死的字面量会与按请求选出的字面量互相矛盾。因此这里选择固定常量，并接受它的代价：Segment 文本中的行内代码若恰好包含该字面量，会原样发送；模型若照抄，回复会多切出一段，数量校验失败并让该 Chunk 报 `invalidResponse`。这是响亮失败，不会静默错配，而且要求原文出现 `<<<LFSEG>>>` 本身极罕见。
+
+若将来确实要同时保留碰撞保护与逐字写出的分隔符，需要把全部 Chunk 提前交给 Provider transport，在第一个请求之前选定分隔符并固定到整个 Session；那属于会话级决策，要作为新的 ADR 提出。
 
 ### 解析与失败处理
 
@@ -106,7 +108,7 @@ Segment 中的行内代码会原样发送，理论上仍可能包含该字面量
 
 ### Confirmation
 
-* 单元测试覆盖：按分隔符切分与空片段丢弃、段数与输入不符、单 Segment Chunk 的宽容、多 Segment Chunk 拒绝 JSON 信封、原文命中分隔符时按候选表替换；
+* 单元测试覆盖：按分隔符切分与空片段丢弃、段数与输入不符、单 Segment Chunk 的宽容、多 Segment Chunk 拒绝 JSON 信封、原文含分隔符时原样发送并因数量不符失败；
 * e2e 的假 Provider 按新协议解析请求并作答，改动后运行 `pnpm e2e`，因为 Provider 协议同时属于 content/background 的边界；
 * e2e 用从 [SemiAnalysis 的 Engram 文章](https://newsletter.semianalysis.com/p/engrams-embedding-entendre-codesign) 抓取的片段作为真实素材：长段落、`figcaption` 图注、密集外链和 H1 小节，验证分片、图注渲染与 `lf-link:N` 还原；
 * 可选 `pnpm test:live`：同一模型、同一提示、同一分段，对照 JSON 协议与分隔符协议的解析失败率、耗时和 token 用量，产物写入 `test-results/`。

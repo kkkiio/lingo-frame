@@ -1,5 +1,6 @@
 import { TARGET_LANGUAGES } from "../shared/languages";
 import type { Settings } from "../shared/settings";
+import { SEGMENT_SEPARATOR } from "./segment-protocol";
 
 export const DEFAULT_TRANSLATION_INSTRUCTIONS = [
   "Write natural, accurate translations suited to the subject and audience.",
@@ -30,9 +31,7 @@ export function createTranslationSystemPrompt(settings: Settings): string {
     instructions,
     "</translation_instructions>",
     "",
-    "The latest user message starts with a separator and repeats it before every source segment.",
-    "Reply with one translation per source segment, in the same order, and put the identical separator before every translation.",
-    "Copy the separator character for character. Output nothing else: no numbering, no notes, no code fences, and no text outside the segments.",
-    "A translation may contain line breaks.",
+    `The latest user message starts with ${SEGMENT_SEPARATOR} and repeats it before every source segment.`,
+    `Reply with one translation per source segment, in the same order, and put the identical ${SEGMENT_SEPARATOR} before every translation.`,
   ].join("\n");
 }

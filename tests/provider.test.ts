@@ -3,13 +3,11 @@ import type { TranslationSegment } from "../src/shared/messages";
 import { DEFAULT_SETTINGS, type Settings } from "../src/shared/settings";
 import { ProviderTranslationSession } from "../src/translation/provider";
 import {
-  SEGMENT_SEPARATORS,
+  SEGMENT_SEPARATOR,
   encodeSegments,
-  readSegmentSeparator,
+  isSegmentMessage,
   splitSegments,
 } from "../src/translation/segment-protocol";
-
-const separator = SEGMENT_SEPARATORS[0];
 
 function completion(content: string): Response {
   return new Response(
@@ -23,19 +21,12 @@ function completion(content: string): Response {
 function lastUserMessage(init: RequestInit | undefined): {
   body: Record<string, any>;
   content: string;
-  separator: string;
   segments: string[];
 } {
   const body = JSON.parse(String(init?.body));
   const content = String(body.messages.at(-1).content);
-  const declared = readSegmentSeparator(content);
-  expect(declared).not.toBeNull();
-  return {
-    body,
-    content,
-    separator: declared!,
-    segments: splitSegments(content, declared!),
-  };
+  expect(isSegmentMessage(content)).toBe(true);
+  return { body, content, segments: splitSegments(content) };
 }
 
 afterEach(() => {
@@ -60,7 +51,7 @@ describe("ProviderTranslationSession", () => {
     };
     const fetchMock = vi
       .spyOn(globalThis, "fetch")
-      .mockResolvedValue(completion(`${separator}\n翻訳結果`));
+      .mockResolvedValue(completion(`${SEGMENT_SEPARATOR}\n翻訳結果`));
 
     const session = new ProviderTranslationSession(settings);
     const result = await session.translateChunk([segment], new AbortController().signal);
@@ -76,8 +67,8 @@ describe("ProviderTranslationSession", () => {
     expect(request.body.thinking).toBeUndefined();
     expect(request.body.response_format).toBeUndefined();
     expect(request.body.messages[0].content).toContain("Japanese");
-    expect(request.body.messages[0].content).toContain("separator");
-    expect(request.content).toBe(`${separator}\nOriginal text`);
+    expect(request.body.messages[0].content).toContain(SEGMENT_SEPARATOR);
+    expect(request.content).toBe(`${SEGMENT_SEPARATOR}\nOriginal text`);
     expect(request.segments).toEqual([segment.text]);
   });
 
@@ -157,7 +148,7 @@ describe("ProviderTranslationSession", () => {
       )
       .mockResolvedValueOnce(new Response(JSON.stringify({ choices: [] }), { status: 200 }))
       .mockResolvedValueOnce(
-        completion(`${separator}\nTranslated\n${separator}\nUnexpected extra translation`),
+        completion(`${SEGMENT_SEPARATOR}\nTranslated\n${SEGMENT_SEPARATOR}\nUnexpected extra`),
       );
 
     await expect(
@@ -227,10 +218,7 @@ describe("ProviderTranslationSession", () => {
     const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async (_url, init) => {
       const request = lastUserMessage(init);
       return completion(
-        encodeSegments(
-          request.segments.map((text) => `translated-${text}`),
-          request.separator,
-        ),
+        encodeSegments(request.segments.map((text) => `translated-${text}`)),
       );
     });
 
@@ -252,34 +240,42 @@ describe("ProviderTranslationSession", () => {
       "user",
     ]);
 
-    const firstSeparator = readSegmentSeparator(firstBody.messages[1].content)!;
-    const secondSeparator = readSegmentSeparator(secondBody.messages[3].content)!;
-    expect(firstSeparator).toBe(secondSeparator);
-    expect(secondBody.messages[1].content).toBe(encodeSegments([first.text], firstSeparator));
-    expect(secondBody.messages[2].content).toBe(
-      encodeSegments([`translated-${first.text}`], firstSeparator),
-    );
-    expect(secondBody.messages[3].content).toBe(encodeSegments([second.text], secondSeparator));
+    expect(secondBody.messages[1].content).toBe(encodeSegments([first.text]));
+    expect(secondBody.messages[2].content).toBe(encodeSegments([`translated-${first.text}`]));
+    expect(secondBody.messages[3].content).toBe(encodeSegments([second.text]));
+    expect(isSegmentMessage(secondBody.messages[2].content)).toBe(true);
     expect(result).toEqual([{ id: second.id, text: `translated-${second.text}` }]);
   });
 
-  it("switches separators when the source text already contains one", async () => {
+  it("sends source text that contains the separator verbatim", async () => {
     const settings: Settings = structuredClone(DEFAULT_SETTINGS);
     settings.providers.deepseek.apiKey = "test-key";
     const segment: TranslationSegment = {
       id: "unit-0:segment-0",
       unitId: "unit-0",
       role: "text",
-      text: `Keep ${SEGMENT_SEPARATORS[0]} unchanged`,
+      text: `Keep ${SEGMENT_SEPARATOR} unchanged`,
     };
     const fetchMock = vi
       .spyOn(globalThis, "fetch")
-      .mockResolvedValue(completion(`${SEGMENT_SEPARATORS[1]}\n译文`));
+      .mockResolvedValue(completion(encodeSegments(["译文"])));
 
     const session = new ProviderTranslationSession(settings);
     const result = await session.translateChunk([segment], new AbortController().signal);
 
-    expect(lastUserMessage(fetchMock.mock.calls[0]?.[1]).separator).toBe(SEGMENT_SEPARATORS[1]);
+    // ADR-0003 accepts this collision instead of switching separators: the text
+    // travels verbatim, and a reply that repeats the literal fails the count.
+    expect(lastUserMessage(fetchMock.mock.calls[0]?.[1]).content).toBe(
+      `${SEGMENT_SEPARATOR}\nKeep ${SEGMENT_SEPARATOR} unchanged`,
+    );
     expect(result).toEqual([{ id: segment.id, text: "译文" }]);
+
+    // A reply that repeats the source literal splits into too many parts and fails loudly.
+    fetchMock.mockResolvedValueOnce(
+      completion(`${SEGMENT_SEPARATOR}\nKeep ${SEGMENT_SEPARATOR} unchanged`),
+    );
+    await expect(
+      session.translateChunk([segment], new AbortController().signal),
+    ).rejects.toThrow("invalidResponse");
   });
 });
