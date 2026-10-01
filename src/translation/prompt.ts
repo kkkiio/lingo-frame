@@ -30,7 +30,9 @@ export function createTranslationSystemPrompt(settings: Settings): string {
     instructions,
     "</translation_instructions>",
     "",
-    'Return only JSON: {"translations":["..."]}.',
-    "Provide one translated string per input segment, in the same order.",
+    "The latest user message starts with a separator and repeats it before every source segment.",
+    "Reply with one translation per source segment, in the same order, and put the identical separator before every translation.",
+    "Copy the separator character for character. Output nothing else: no numbering, no notes, no code fences, and no text outside the segments.",
+    "A translation may contain line breaks.",
   ].join("\n");
 }

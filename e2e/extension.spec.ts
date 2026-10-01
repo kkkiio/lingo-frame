@@ -4,9 +4,20 @@ import { createServer, type Server } from "node:http";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import {
+  SEGMENT_SEPARATORS,
+  encodeSegments,
+  readSegmentSeparator,
+  splitSegments,
+} from "../src/translation/segment-protocol";
 
 const progressiveArticle = readFileSync(
   resolve("tests/fixtures/translation-sessions/progressive-article.html"),
+  "utf8",
+).trim();
+
+const semianalysisEngramArticle = readFileSync(
+  resolve("tests/fixtures/translation-sessions/semianalysis-engram.html"),
   "utf8",
 ).trim();
 
@@ -18,9 +29,22 @@ let profilePath: string;
 let extensionOrigin: string;
 let providerRequests: Array<{
   body: Record<string, unknown>;
-  segments: Array<{ role: string; text: string }>;
+  separator: string;
+  segments: Array<{ text: string }>;
   messages: Array<{ role: string; content: string }>;
 }> = [];
+
+// ADR-0003: the user message is plain text whose first line declares the separator.
+function decodeSegmentRequest(content: string): {
+  separator: string;
+  segments: Array<{ text: string }>;
+} {
+  const separator = readSegmentSeparator(content);
+  if (!separator) {
+    throw new Error(`Request does not declare a segment separator: ${content.slice(0, 80)}`);
+  }
+  return { separator, segments: splitSegments(content, separator).map((text) => ({ text })) };
+}
 
 test.beforeAll(async () => {
   server = createServer((request, response) => {
@@ -38,9 +62,10 @@ test.beforeAll(async () => {
       });
       request.on("end", () => {
         const payload = JSON.parse(body);
-        const providerRequest = JSON.parse(payload.messages.at(-1).content);
+        const providerRequest = decodeSegmentRequest(payload.messages.at(-1).content);
         providerRequests.push({
           body: payload,
+          separator: providerRequest.separator,
           segments: providerRequest.segments,
           messages: payload.messages,
         });
@@ -92,12 +117,13 @@ test.beforeAll(async () => {
               choices: [
                 {
                   message: {
-                    content: JSON.stringify({
-                      translations: providerRequest.segments.map(
+                    content: encodeSegments(
+                      providerRequest.segments.map(
                         (segment: { text: string }) =>
                           translations[segment.text] ?? `译文：${segment.text}`,
                       ),
-                    }),
+                      providerRequest.separator,
+                    ),
                   },
                 },
               ],
@@ -254,6 +280,11 @@ test.beforeAll(async () => {
           if (location.pathname === '/progress-claudefast') {
             document.body.innerHTML = ${JSON.stringify(progressiveArticle)};
             document.querySelector('#selected').id = 'progress-claudefast-region';
+          }
+          if (location.pathname === '/semianalysis-engram') {
+            document.body.innerHTML = ${JSON.stringify(semianalysisEngramArticle)};
+            document.querySelector('#semianalysis-engram-region').style.cssText =
+              'max-width:760px;margin:40px auto;padding:40px;font:18px/1.65 Georgia,serif';
           }
           if (location.pathname === '/progress-x') {
             const shell = document.createElement('main');
@@ -451,14 +482,8 @@ test("preserves text-node line breaks in one translation block", async () => {
   await expect(translation).toHaveCSS("white-space", "pre-wrap");
   expect(providerRequests).toHaveLength(requestCount + 1);
   expect(providerRequests.at(-1)?.segments).toEqual([
-    {
-      role: "text",
-      text: "First paragraph.",
-    },
-    {
-      role: "text",
-      text: "Second paragraph.",
-    },
+    { text: "First paragraph." },
+    { text: "Second paragraph." },
   ]);
 });
 
@@ -483,10 +508,7 @@ test("translates natural-language prose in an explicitly selected pre region", a
   await expect(translation).toHaveText("预格式化文本也可以承载不含源代码的完整文章。");
   expect(providerRequests).toHaveLength(requestCount + 1);
   expect(providerRequests.at(-1)?.segments).toEqual([
-    {
-      role: "text",
-      text: "Preformatted prose can carry a complete article without containing source code.",
-    },
+    { text: "Preformatted prose can carry a complete article without containing source code." },
   ]);
 });
 
@@ -515,10 +537,9 @@ test("progressively translates a ClaudeFast-style structured article", async () 
     "user",
   ]);
   expect(
-    JSON.parse(secondRequest.messages[1]!.content).segments.map(
-      ({ text }: { text: string }) => text,
-    ),
+    splitSegments(secondRequest.messages[1]!.content, secondRequest.separator),
   ).toEqual(providerRequests.at(-2)?.segments.map(({ text }) => text));
+  expect(readSegmentSeparator(secondRequest.messages[2]!.content)).toBe(secondRequest.separator);
   expect(secondRequest.segments.map(({ text }) => text)).toEqual([
     "Second section",
     "Section paragraph",
@@ -536,6 +557,63 @@ test("progressively translates a ClaudeFast-style structured article", async () 
       2,
     ) + "\n",
   ).toMatchSnapshot("multi-turn-requests.json");
+});
+
+test("translates a SemiAnalysis article excerpt with the plain-text segment protocol", async () => {
+  const page = context.pages()[0]!;
+  await page.goto(`${origin}/semianalysis-engram`);
+  await activatePicker();
+  const requestCount = providerRequests.length;
+
+  const region = page.locator("#semianalysis-engram-region");
+  const box = await region.boundingBox();
+  expect(box).not.toBeNull();
+  await page.mouse.move(box!.x + 8, box!.y + 8);
+  await expect(
+    page
+      .frameLocator("iframe[data-lingo-frame-picker]")
+      .locator(".lingo-frame-picker-highlight"),
+  ).toHaveAttribute("data-candidate", "article");
+  await page.mouse.click(box!.x + 8, box!.y + 8);
+
+  await expect.poll(() => providerRequests.length).toBeGreaterThan(requestCount + 1);
+  await expect(region.locator(".lingo-frame-loading")).toHaveCount(0);
+
+  const requests = providerRequests.slice(requestCount);
+  const sourceSegments: string[] = [];
+  for (const request of requests) {
+    // ADR-0003: no JSON envelope and no response_format; every chunk declares its separator.
+    expect(request.body).not.toHaveProperty("response_format");
+    const content = request.messages.at(-1)!.content;
+    expect(content).not.toContain('"segments"');
+    expect(content).not.toContain('"translations"');
+    expect(content.startsWith(request.separator)).toBe(true);
+    expect(content.split(request.separator)).toHaveLength(request.segments.length + 1);
+    let declared = "";
+    for (const message of request.messages) {
+      if (message.role === "user") {
+        declared = readSegmentSeparator(message.content)!;
+      }
+      if (message.role === "assistant") {
+        expect(readSegmentSeparator(message.content)).toBe(declared);
+      }
+    }
+    sourceSegments.push(...splitSegments(content, request.separator));
+  }
+
+  // Chunking happens across requests, but every segment travels exactly once, in order.
+  expect(sourceSegments).toHaveLength(19);
+  expect(sourceSegments[0]).toContain("Engram extends standard token embeddings");
+  expect(sourceSegments.filter((text) => text === "Source: SemiAnalysis")).toHaveLength(3);
+  expect(sourceSegments.some((text) => text.startsWith("Source: [InferenceX](lf-link:"))).toBe(true);
+  expect(sourceSegments.some((text) => text.includes("[Google Cloud](lf-link:"))).toBe(true);
+
+  // Captions, bold lead-ins, and link destinations survive the round trip.
+  await expect(region.locator("figcaption .lingo-frame-bilingual-content")).toHaveCount(5);
+  await expect(region.locator("figcaption").first()).toContainText("译文：Source: SemiAnalysis");
+  await expect(
+    region.locator("p .lingo-frame-bilingual-content a[href^='https://cloud.google.com']"),
+  ).toHaveCount(1);
 });
 
 test("translates an X-style Draft.js article through inline heading wrappers", async () => {
@@ -577,7 +655,6 @@ test("keeps inline mentions in their surrounding translation unit", async () => 
   expect(providerRequests).toHaveLength(requestCount + 1);
   expect(providerRequests.at(-1)?.segments).toEqual([
     {
-      role: "text",
       text: "Native web search is powered by [@ExaAILabs](lf-link:1) and [@SearchPartner](lf-link:2).",
     },
   ]);
@@ -603,10 +680,7 @@ test("translates prose containing inline commands as a complete paragraph", asyn
   await expect(region.locator(".lingo-frame-bilingual-content")).toHaveCount(1);
   expect(providerRequests).toHaveLength(requestCount + 1);
   expect(providerRequests.at(-1)?.segments).toEqual([
-    {
-      role: "paragraph",
-      text: "Why does `/plan` still cheat while `/prewalk` doesn't?",
-    },
+    { text: "Why does `/plan` still cheat while `/prewalk` doesn't?" },
   ]);
   expect(JSON.stringify(providerRequests.at(-1)!.body, null, 2) + "\n").toMatchSnapshot(
     "inline-code-request.json",
@@ -637,12 +711,7 @@ test("translates an explicitly selected code region inside a pre", async () => {
     "译文：pnpm test",
   );
   expect(providerRequests).toHaveLength(requestCount + 1);
-  expect(providerRequests.at(-1)?.segments).toEqual([
-    {
-      role: "text",
-      text: "pnpm test",
-    },
-  ]);
+  expect(providerRequests.at(-1)?.segments).toEqual([{ text: "pnpm test" }]);
 });
 
 test("Escape removes the picker and restores normal page interaction", async () => {
