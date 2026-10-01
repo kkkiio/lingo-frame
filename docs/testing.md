@@ -12,7 +12,7 @@
 | [`inline-code-request.json`](../e2e/__snapshots__/inline-code-request.json) | Chromium 扩展发送到本地 HTTP 服务的单轮请求 body |
 | [`multi-turn-requests.json`](../e2e/__snapshots__/multi-turn-requests.json) | 按发送顺序保存的两轮请求，包含完整历史对话 |
 
-请求快照保留 `messages[].content` 的字符串类型以及全部 body 字段。JSON 文件中的换行和内层 JSON 使用转义表示；Provider 的 Vitest 快照会将提示词换行直接展示出来。快照不包含请求头或 API Key。
+请求快照保留 `messages[].content` 的字符串类型以及全部 body 字段。按 [ADR-0003](./adr/0003-plain-text-segment-protocol.md)，`content` 是纯文本 Segment 消息，不再包含内层 JSON；JSON 快照中的换行使用 `\n` 转义表示，Provider 的 Vitest 快照会将提示词换行直接展示出来。快照不包含请求头或 API Key。
 
 普通测试运行会对比已提交的基线。确认行为变化符合预期后，用 `pnpm test --update` 或 `pnpm e2e --update-snapshots` 更新对应基线，再逐项审阅 Git diff。
 

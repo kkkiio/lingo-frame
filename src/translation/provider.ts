@@ -4,6 +4,7 @@ import type { TranslationResult, TranslationSegment } from "../shared/messages";
 import type { Settings } from "../shared/settings";
 import { getActiveProviderSettings } from "../shared/settings";
 import { createTranslationSystemPrompt } from "./prompt";
+import { encodeSegments, parseTranslations } from "./segment-protocol";
 
 const chatCompletionSchema = z.object({
   choices: z
@@ -15,10 +16,6 @@ const chatCompletionSchema = z.object({
       }),
     )
     .min(1),
-});
-
-const regionTranslationSchema = z.object({
-  translations: z.array(z.string().min(1)),
 });
 
 interface ChatMessage {
@@ -65,14 +62,11 @@ export class ProviderTranslationSession {
 
     const userMessage: ChatMessage = {
       role: "user",
-      content: JSON.stringify({
-        segments: segments.map(({ role, text }) => ({ role, text })),
-      }),
+      content: encodeSegments(segments.map(({ text }) => text)),
     };
     const requestBody: Record<string, unknown> = {
       model: this.provider.model,
       messages: [...this.messages, userMessage],
-      response_format: { type: "json_object" },
     };
     if (this.settings.provider === "deepseek") {
       requestBody.thinking = { type: "disabled" };
@@ -99,23 +93,18 @@ export class ProviderTranslationSession {
       throw new TranslationError({ code: "invalidResponse" });
     }
 
-    const parsed = regionTranslationSchema.parse(JSON.parse(content));
-    if (
-      parsed.translations.length !== segments.length ||
-      parsed.translations.some((translation) => !translation.trim())
-    ) {
+    const parsed = parseTranslations(content, segments.length);
+    if (!parsed) {
       throw new TranslationError({ code: "invalidResponse" });
     }
 
     const translations = segments.map(({ id }, index) => ({
       id,
-      text: parsed.translations[index]!.trim(),
+      text: parsed[index]!,
     }));
     this.messages.push(userMessage, {
       role: "assistant",
-      content: JSON.stringify({
-        translations: translations.map(({ text }) => text),
-      }),
+      content: encodeSegments(translations.map(({ text }) => text)),
     });
     return translations;
   }

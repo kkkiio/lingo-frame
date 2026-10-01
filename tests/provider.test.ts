@@ -2,6 +2,32 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { TranslationSegment } from "../src/shared/messages";
 import { DEFAULT_SETTINGS, type Settings } from "../src/shared/settings";
 import { ProviderTranslationSession } from "../src/translation/provider";
+import {
+  SEGMENT_SEPARATOR,
+  encodeSegments,
+  isSegmentMessage,
+  splitSegments,
+} from "../src/translation/segment-protocol";
+
+function completion(content: string): Response {
+  return new Response(
+    JSON.stringify({
+      choices: [{ message: { role: "assistant", content } }],
+    }),
+    { status: 200, headers: { "Content-Type": "application/json" } },
+  );
+}
+
+function lastUserMessage(init: RequestInit | undefined): {
+  body: Record<string, any>;
+  content: string;
+  segments: string[];
+} {
+  const body = JSON.parse(String(init?.body));
+  const content = String(body.messages.at(-1).content);
+  expect(isSegmentMessage(content)).toBe(true);
+  return { body, content, segments: splitSegments(content) };
+}
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -23,22 +49,9 @@ describe("ProviderTranslationSession", () => {
       role: "paragraph",
       text: "Original text",
     };
-    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      new Response(
-        JSON.stringify({
-          choices: [
-            {
-              message: {
-                content: JSON.stringify({
-                  translations: ["翻訳結果"],
-                }),
-              },
-            },
-          ],
-        }),
-        { status: 200, headers: { "Content-Type": "application/json" } },
-      ),
-    );
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(completion(`${SEGMENT_SEPARATOR}\n翻訳結果`));
 
     const session = new ProviderTranslationSession(settings);
     const result = await session.translateChunk([segment], new AbortController().signal);
@@ -48,15 +61,15 @@ describe("ProviderTranslationSession", () => {
     const [url, init] = fetchMock.mock.calls[0]!;
     expect(url).toBe("https://translator.example/v1/chat/completions");
     expect((init?.headers as Record<string, string>).Authorization).toBe("Bearer test-key");
-    const body = JSON.parse(String(init?.body));
-    expect(body).toMatchSnapshot();
-    expect(body.model).toBe("example-model");
-    expect(body.thinking).toBeUndefined();
-    expect(body.response_format).toEqual({ type: "json_object" });
-    expect(body.messages[0].content).toContain("Japanese");
-    expect(JSON.parse(body.messages[1].content)).toEqual({
-      segments: [{ role: segment.role, text: segment.text }],
-    });
+    const request = lastUserMessage(init);
+    expect(request.body).toMatchSnapshot();
+    expect(request.body.model).toBe("example-model");
+    expect(request.body.thinking).toBeUndefined();
+    expect(request.body.response_format).toBeUndefined();
+    expect(request.body.messages[0].content).toContain("Japanese");
+    expect(request.body.messages[0].content).toContain(SEGMENT_SEPARATOR);
+    expect(request.content).toBe(`${SEGMENT_SEPARATOR}\nOriginal text`);
+    expect(request.segments).toEqual([segment.text]);
   });
 
   it("uses custom translation instructions", async () => {
@@ -66,22 +79,7 @@ describe("ProviderTranslationSession", () => {
       mode: "custom",
       customText: "Use concise language for domain experts.",
     };
-    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      new Response(
-        JSON.stringify({
-          choices: [
-            {
-              message: {
-                content: JSON.stringify({
-                  translations: ["Translated"],
-                }),
-              },
-            },
-          ],
-        }),
-        { status: 200 },
-      ),
-    );
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(completion("Translated"));
 
     const session = new ProviderTranslationSession(settings);
     await session.translateChunk(
@@ -96,30 +94,14 @@ describe("ProviderTranslationSession", () => {
       new AbortController().signal,
     );
 
-    const body = JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body));
-    expect(body).toMatchSnapshot();
+    expect(lastUserMessage(fetchMock.mock.calls[0]?.[1]).body).toMatchSnapshot();
   });
 
   it("accepts a complete endpoint URL and disables DeepSeek thinking", async () => {
     const settings: Settings = structuredClone(DEFAULT_SETTINGS);
     settings.providers.deepseek.apiKey = "test-key";
     settings.providers.deepseek.baseUrl = "https://api.example/chat/completions";
-    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      new Response(
-        JSON.stringify({
-          choices: [
-            {
-              message: {
-                content: JSON.stringify({
-                  translations: ["Translated"],
-                }),
-              },
-            },
-          ],
-        }),
-        { status: 200 },
-      ),
-    );
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(completion("Translated"));
 
     const session = new ProviderTranslationSession(settings);
     await session.translateChunk(
@@ -135,9 +117,9 @@ describe("ProviderTranslationSession", () => {
     );
 
     expect(fetchMock.mock.calls[0]?.[0]).toBe("https://api.example/chat/completions");
-    const body = JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body));
-    expect(body).toMatchSnapshot();
-    expect(body.thinking).toEqual({ type: "disabled" });
+    const request = lastUserMessage(fetchMock.mock.calls[0]?.[1]);
+    expect(request.body).toMatchSnapshot();
+    expect(request.body.thinking).toEqual({ type: "disabled" });
   });
 
   it("rejects missing credentials before making a request", () => {
@@ -166,20 +148,7 @@ describe("ProviderTranslationSession", () => {
       )
       .mockResolvedValueOnce(new Response(JSON.stringify({ choices: [] }), { status: 200 }))
       .mockResolvedValueOnce(
-        new Response(
-          JSON.stringify({
-            choices: [
-              {
-                message: {
-                  content: JSON.stringify({
-                    translations: ["Translated", "Unexpected extra translation"],
-                  }),
-                },
-              },
-            ],
-          }),
-          { status: 200 },
-        ),
+        completion(`${SEGMENT_SEPARATOR}\nTranslated\n${SEGMENT_SEPARATOR}\nUnexpected extra`),
       );
 
     await expect(
@@ -202,6 +171,35 @@ describe("ProviderTranslationSession", () => {
     ).rejects.toThrow("invalidResponse");
   });
 
+  it("rejects the object-array reply shape that motivated ADR-0003", async () => {
+    const settings: Settings = structuredClone(DEFAULT_SETTINGS);
+    settings.providers.deepseek.apiKey = "test-key";
+    const segments: TranslationSegment[] = ["caption-0", "paragraph-0"].map((id) => ({
+      id: `unit-${id}`,
+      unitId: `unit-${id}`,
+      role: "text",
+      text: `Source text ${id}`,
+    }));
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      completion(
+        JSON.stringify({
+          translations: [
+            { role: "caption", text: "来源：SemiAnalysis" },
+            { role: "paragraph", text: "**卸载释放了 HBM**" },
+          ],
+        }),
+      ),
+    );
+
+    await expect(
+      new ProviderTranslationSession(settings).translateChunk(
+        segments,
+        new AbortController().signal,
+      ),
+    ).rejects.toThrow("invalidResponse");
+    expect(fetchMock).toHaveBeenCalledOnce();
+  });
+
   it("appends each successful chunk to one multi-turn context", async () => {
     const settings: Settings = structuredClone(DEFAULT_SETTINGS);
     settings.providers.deepseek.apiKey = "test-key";
@@ -218,23 +216,9 @@ describe("ProviderTranslationSession", () => {
       text: "Next section",
     };
     const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async (_url, init) => {
-      const body = JSON.parse(String(init?.body));
-      const request = JSON.parse(body.messages.at(-1).content);
-      return new Response(
-        JSON.stringify({
-          choices: [
-            {
-              message: {
-                content: JSON.stringify({
-                  translations: request.segments.map(
-                    (segment: { text: string }) => `translated-${segment.text}`,
-                  ),
-                }),
-              },
-            },
-          ],
-        }),
-        { status: 200 },
+      const request = lastUserMessage(init);
+      return completion(
+        encodeSegments(request.segments.map((text) => `translated-${text}`)),
       );
     });
 
@@ -255,15 +239,43 @@ describe("ProviderTranslationSession", () => {
       "assistant",
       "user",
     ]);
-    expect(JSON.parse(secondBody.messages[1].content)).toEqual({
-      segments: [{ role: first.role, text: first.text }],
-    });
-    expect(JSON.parse(secondBody.messages[2].content)).toEqual({
-      translations: [`translated-${first.text}`],
-    });
-    expect(JSON.parse(secondBody.messages[3].content)).toEqual({
-      segments: [{ role: second.role, text: second.text }],
-    });
+
+    expect(secondBody.messages[1].content).toBe(encodeSegments([first.text]));
+    expect(secondBody.messages[2].content).toBe(encodeSegments([`translated-${first.text}`]));
+    expect(secondBody.messages[3].content).toBe(encodeSegments([second.text]));
+    expect(isSegmentMessage(secondBody.messages[2].content)).toBe(true);
     expect(result).toEqual([{ id: second.id, text: `translated-${second.text}` }]);
+  });
+
+  it("sends source text that contains the separator verbatim", async () => {
+    const settings: Settings = structuredClone(DEFAULT_SETTINGS);
+    settings.providers.deepseek.apiKey = "test-key";
+    const segment: TranslationSegment = {
+      id: "unit-0:segment-0",
+      unitId: "unit-0",
+      role: "text",
+      text: `Keep ${SEGMENT_SEPARATOR} unchanged`,
+    };
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(completion(encodeSegments(["译文"])));
+
+    const session = new ProviderTranslationSession(settings);
+    const result = await session.translateChunk([segment], new AbortController().signal);
+
+    // ADR-0003 accepts this collision instead of switching separators: the text
+    // travels verbatim, and a reply that repeats the literal fails the count.
+    expect(lastUserMessage(fetchMock.mock.calls[0]?.[1]).content).toBe(
+      `${SEGMENT_SEPARATOR}\nKeep ${SEGMENT_SEPARATOR} unchanged`,
+    );
+    expect(result).toEqual([{ id: segment.id, text: "译文" }]);
+
+    // A reply that repeats the source literal splits into too many parts and fails loudly.
+    fetchMock.mockResolvedValueOnce(
+      completion(`${SEGMENT_SEPARATOR}\nKeep ${SEGMENT_SEPARATOR} unchanged`),
+    );
+    await expect(
+      session.translateChunk([segment], new AbortController().signal),
+    ).rejects.toThrow("invalidResponse");
   });
 });
