@@ -2,7 +2,7 @@
 
 * Status: accepted
 * Date: 2026-09-16
-* 修订关系：Translation Chunk 的边界与尺寸规则由 [ADR-0002](./0002-translation-chunk-sizing.md) 修订；消息结构由 [ADR-0003](./0003-plain-text-segment-protocol.md) 修订。
+* 修订关系：Translation Chunk 的边界与尺寸规则由 [ADR-0002](./0002-translation-chunk-sizing.md) 修订；消息结构与 Unit 内部分段由 [ADR-0003](./0003-plain-text-segment-protocol.md) 修订。下文保留最初的分段和 JSON 决策；当前一个 Unit 对应一个翻译项，统一使用 `[[TRANSLATE]]`。
 
 ## Context and Problem Statement
 

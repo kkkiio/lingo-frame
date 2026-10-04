@@ -5,7 +5,6 @@ import type { RegionTranslationUnit } from "./scan-region";
 export interface MarkdownSegment {
   markdown: string;
   plainText: string;
-  separatorBefore: string;
   links: Map<string, string>;
 }
 
@@ -25,80 +24,52 @@ const markdown = new MarkdownIt("zero", { html: false, breaks: true, linkify: fa
 export function serializeTranslationUnit(
   unit: RegionTranslationUnit,
   linkIds: Map<HTMLElement, string>,
-): MarkdownSegment[] {
-  const source = unit.runs.map(({ text }) => text).join("");
-  const boundaries = [...source.matchAll(/\r?\n[^\S\r\n]*\r?\n+/g)];
-  const segments: MarkdownSegment[] = [];
-  let start = 0;
-  let separatorBefore = "";
-  for (const boundary of [...boundaries, null]) {
-    const end = boundary?.index ?? source.length;
-    const part = source.slice(start, end);
-    const trimmed = part.trim();
-    const from = start + part.indexOf(trimmed);
-    const to = from + trimmed.length;
-    if (trimmed) {
-      const fragment = document.createElement("pre");
-      const links = new Map<string, string>();
-      let offset = 0;
-      let previousAncestors: HTMLElement[] = [];
-      const stack: HTMLElement[] = [fragment];
-      for (const run of unit.runs) {
-        const runEnd = offset + run.text.length;
-        const text = run.text.slice(
-          Math.max(0, from - offset),
-          Math.max(0, Math.min(run.text.length, to - offset)),
-        );
-        offset = runEnd;
-        if (!text) continue;
-        let common = 0;
-        while (
-          common < previousAncestors.length &&
-          previousAncestors[common] === run.ancestors[common]
-        )
-          common += 1;
-        stack.length = common + 1;
-        for (const ancestor of run.ancestors.slice(common)) {
-          const tag =
-            ancestor.localName === "b"
-              ? "strong"
-              : ancestor.localName === "i"
-                ? "em"
-                : ancestor.localName;
-          const clone = document.createElement(tag);
-          if (tag === "a" && ancestor.hasAttribute("href")) {
-            try {
-              const url = new URL(ancestor.getAttribute("href")!, ancestor.baseURI);
-              if (["https:", "http:", "mailto:"].includes(url.protocol)) {
-                let id = linkIds.get(ancestor);
-                if (!id) {
-                  id = `lf-link:${linkIds.size + 1}`;
-                  linkIds.set(ancestor, id);
-                }
-                links.set(id, url.href);
-                clone.setAttribute("href", id);
-              }
-            } catch {
-              /* Invalid destinations leave readable link labels. */
+): MarkdownSegment {
+  const fragment = document.createElement("pre");
+  const links = new Map<string, string>();
+  let previousAncestors: HTMLElement[] = [];
+  const stack: HTMLElement[] = [fragment];
+  for (const run of unit.runs) {
+    if (!run.text) continue;
+    let common = 0;
+    while (common < previousAncestors.length && previousAncestors[common] === run.ancestors[common])
+      common += 1;
+    stack.length = common + 1;
+    for (const ancestor of run.ancestors.slice(common)) {
+      const tag =
+        ancestor.localName === "b"
+          ? "strong"
+          : ancestor.localName === "i"
+            ? "em"
+            : ancestor.localName;
+      const clone = document.createElement(tag);
+      if (tag === "a" && ancestor.hasAttribute("href")) {
+        try {
+          const url = new URL(ancestor.getAttribute("href")!, ancestor.baseURI);
+          if (["https:", "http:", "mailto:"].includes(url.protocol)) {
+            let id = linkIds.get(ancestor);
+            if (!id) {
+              id = `lf-link:${linkIds.size + 1}`;
+              linkIds.set(ancestor, id);
             }
+            links.set(id, url.href);
+            clone.setAttribute("href", id);
           }
-          stack.at(-1)!.append(clone);
-          stack.push(clone);
+        } catch {
+          /* Invalid destinations leave readable link labels. */
         }
-        stack.at(-1)!.append(document.createTextNode(text));
-        previousAncestors = run.ancestors;
       }
-      segments.push({
-        markdown: turndown.turndown(fragment),
-        plainText: trimmed,
-        separatorBefore,
-        links,
-      });
+      stack.at(-1)!.append(clone);
+      stack.push(clone);
     }
-    start = end + (boundary?.[0].length ?? 0);
-    separatorBefore = boundary?.[0] ?? "";
+    stack.at(-1)!.append(document.createTextNode(run.text));
+    previousAncestors = run.ancestors;
   }
-  return segments;
+  return {
+    markdown: turndown.turndown(fragment),
+    plainText: unit.runs.map(({ text }) => text).join("").trim(),
+    links,
+  };
 }
 
 export function renderTranslationMarkdown(

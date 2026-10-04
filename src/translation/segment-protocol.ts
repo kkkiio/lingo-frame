@@ -2,12 +2,12 @@
  * Plain-text Translation Segment protocol (ADR-0003).
  *
  * Segments travel as plain text separated by a fixed literal instead of a JSON
- * envelope: the system message states the literal, the user message repeats it
- * before every segment, and the reply is split by that same literal. The module
- * is pure so the extension and the test servers share one implementation.
+ * envelope. Every unit is preceded by the same literal, including single-unit
+ * chunks. The module is pure so the extension and the test servers share one
+ * implementation.
  */
 
-export const SEGMENT_SEPARATOR = "<<<LFSEG>>>";
+export const SEGMENT_SEPARATOR = "[[TRANSLATE]]";
 
 /** True when the first line of a message declares the segment separator. */
 export function isSegmentMessage(content: string): boolean {

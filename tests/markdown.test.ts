@@ -11,7 +11,7 @@ describe("formatted bilingual content", () => {
   it("preserves nested emphasis, commands, and link labels within their paragraphs", () => {
     document.body.innerHTML = `<article id="selected"><p>Read <strong>the <em>full guide</em></strong>, then run <code>pnpm test</code> and <a href="https://example.org/guide">continue</a>.</p><p hidden>Private</p></article><p>Outside</p>`;
     const units = scanRegion(document.querySelector("#selected")!);
-    const [segment] = serializeTranslationUnit(units[0]!, new Map());
+    const segment = serializeTranslationUnit(units[0]!, new Map());
     expect(units).toHaveLength(1);
     expect(segment!.markdown).toBe(
       "Read **the *full guide***, then run `pnpm test` and [continue](lf-link:1).",
@@ -28,25 +28,26 @@ describe("formatted bilingual content", () => {
     expect(slot.querySelector("a")?.rel).toBe("noopener noreferrer");
   });
 
-  it("closes formatting at blank-line boundaries and restores exact separators", () => {
+  it("keeps blank lines and cross-line formatting in one translation item", () => {
     document.body.innerHTML =
       '<div id="selected"><strong>First\n\nSecond</strong> paragraph.\n\nThird <code>a`b</code>.</div>';
-    const parts = serializeTranslationUnit(
+    const part = serializeTranslationUnit(
       scanRegion(document.querySelector("#selected")!)[0]!,
       new Map(),
     );
-    expect(parts.map(({ markdown, separatorBefore }) => ({ markdown, separatorBefore }))).toEqual([
-      { markdown: "**First**", separatorBefore: "" },
-      { markdown: "**Second** paragraph.", separatorBefore: "\n\n" },
-      { markdown: "Third ``a`b``.", separatorBefore: "\n\n" },
-    ]);
+    expect(part.markdown).toBe("**First\n\nSecond** paragraph.\n\nThird ``a`b``.");
+    const slot = document.createElement("span");
+    slot.append(renderTranslationMarkdown(part.markdown, part.links));
+    expect(slot.querySelector("strong")?.textContent).toBe("FirstSecond");
+    expect(slot.querySelectorAll("br")).toHaveLength(4);
+    expect(slot.querySelector("code")?.textContent).toBe("a`b");
   });
 
   it("keeps literal Markdown punctuation and single line breaks readable", () => {
     const root = document.createElement("pre");
     root.textContent = "1. Use * literally\nwith [brackets] and a_b.";
     document.body.append(root);
-    const part = serializeTranslationUnit(scanRegion(root)[0]!, new Map())[0]!;
+    const part = serializeTranslationUnit(scanRegion(root)[0]!, new Map());
     const slot = document.createElement("span");
     slot.append(renderTranslationMarkdown(part.markdown, part.links));
     expect(slot.innerHTML).toBe("1. Use * literally<br>with [brackets] and a_b.");
@@ -56,7 +57,7 @@ describe("formatted bilingual content", () => {
     document.body.innerHTML =
       '<article><p><a href="https://example.org/one">First</a></p><p><a href="https://example.org/two">Second</a></p></article>';
     const ids = new Map<HTMLElement, string>();
-    const parts = scanRegion(document.querySelector("article")!).flatMap((unit) =>
+    const parts = scanRegion(document.querySelector("article")!).map((unit) =>
       serializeTranslationUnit(unit, ids),
     );
     expect(parts.map(({ markdown }) => markdown)).toEqual([
@@ -102,7 +103,7 @@ describe("formatted bilingual content", () => {
     const segment = serializeTranslationUnit(
       scanRegion(document.querySelector("p")!)[0]!,
       new Map(),
-    )[0]!;
+    );
     expect(segment.markdown).toContain("Visit this page");
     expect(segment.markdown).toContain("[https://example.org](lf-link:1)");
     expect(segment.links.size).toBe(1);

@@ -79,7 +79,9 @@ describe("ProviderTranslationSession", () => {
       mode: "custom",
       customText: "Use concise language for domain experts.",
     };
-    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(completion("Translated"));
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(completion(encodeSegments(["Translated"])));
 
     const session = new ProviderTranslationSession(settings);
     await session.translateChunk(
@@ -101,7 +103,9 @@ describe("ProviderTranslationSession", () => {
     const settings: Settings = structuredClone(DEFAULT_SETTINGS);
     settings.providers.deepseek.apiKey = "test-key";
     settings.providers.deepseek.baseUrl = "https://api.example/chat/completions";
-    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(completion("Translated"));
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(completion(encodeSegments(["Translated"])));
 
     const session = new ProviderTranslationSession(settings);
     await session.translateChunk(
@@ -217,14 +221,23 @@ describe("ProviderTranslationSession", () => {
     };
     const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async (_url, init) => {
       const request = lastUserMessage(init);
-      return completion(
-        encodeSegments(request.segments.map((text) => `translated-${text}`)),
-      );
+      return completion(encodeSegments(request.segments.map((text) => `translated-${text}`)));
     });
 
     const session = new ProviderTranslationSession(settings);
     await session.translateChunk([first], new AbortController().signal);
-    const result = await session.translateChunk([second], new AbortController().signal);
+    const result = await session.translateChunk(
+      [
+        second,
+        {
+          ...second,
+          id: "unit-2:segment-0",
+          unitId: "unit-2",
+          text: "Closing",
+        },
+      ],
+      new AbortController().signal,
+    );
 
     expect(fetchMock).toHaveBeenCalledTimes(2);
     const firstBody = JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body));
@@ -242,9 +255,14 @@ describe("ProviderTranslationSession", () => {
 
     expect(secondBody.messages[1].content).toBe(encodeSegments([first.text]));
     expect(secondBody.messages[2].content).toBe(encodeSegments([`translated-${first.text}`]));
-    expect(secondBody.messages[3].content).toBe(encodeSegments([second.text]));
+    expect(secondBody.messages[3].content).toBe(
+      `${SEGMENT_SEPARATOR}\nNext section\n${SEGMENT_SEPARATOR}\nClosing`,
+    );
     expect(isSegmentMessage(secondBody.messages[2].content)).toBe(true);
-    expect(result).toEqual([{ id: second.id, text: `translated-${second.text}` }]);
+    expect(result).toEqual([
+      { id: second.id, text: `translated-${second.text}` },
+      { id: "unit-2:segment-0", text: "translated-Closing" },
+    ]);
   });
 
   it("sends source text that contains the separator verbatim", async () => {
@@ -263,19 +281,17 @@ describe("ProviderTranslationSession", () => {
     const session = new ProviderTranslationSession(settings);
     const result = await session.translateChunk([segment], new AbortController().signal);
 
-    // ADR-0003 accepts this collision instead of switching separators: the text
-    // travels verbatim, and a reply that repeats the literal fails the count.
+    // The fixed marker travels verbatim; collisions fail the translation count.
     expect(lastUserMessage(fetchMock.mock.calls[0]?.[1]).content).toBe(
       `${SEGMENT_SEPARATOR}\nKeep ${SEGMENT_SEPARATOR} unchanged`,
     );
     expect(result).toEqual([{ id: segment.id, text: "译文" }]);
 
-    // A reply that repeats the source literal splits into too many parts and fails loudly.
     fetchMock.mockResolvedValueOnce(
-      completion(`${SEGMENT_SEPARATOR}\nKeep ${SEGMENT_SEPARATOR} unchanged`),
+      completion(`${SEGMENT_SEPARATOR}\n保留 ${SEGMENT_SEPARATOR} 不变`),
     );
-    await expect(
-      session.translateChunk([segment], new AbortController().signal),
-    ).rejects.toThrow("invalidResponse");
+    await expect(session.translateChunk([segment], new AbortController().signal)).rejects.toThrow(
+      "invalidResponse",
+    );
   });
 });

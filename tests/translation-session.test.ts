@@ -123,7 +123,7 @@ describe("RegionTranslationSession", () => {
     expect(document.querySelectorAll("[data-lingo-frame-translated='true']")).toHaveLength(6);
   });
 
-  it("keeps short blank-line segments in one request and one Slot", async () => {
+  it("keeps a multiline Unit in one translation item and one Slot", async () => {
     const root = document.createElement("pre");
     root.textContent = shortBlankLinePost;
     document.body.appendChild(root);
@@ -135,28 +135,34 @@ describe("RegionTranslationSession", () => {
       throw new Error("Translation Session did not start");
     }
     expect(start).toMatchSnapshot({ sessionId: expect.any(String) });
+    expect(start.chunks).toHaveLength(1);
+    expect(start.chunks[0]!.segments).toHaveLength(1);
+    expect(start.chunks[0]!.segments[0]!.text).toBe(shortBlankLinePost.trim());
 
     port.emit({
       type: "TRANSLATION_CHUNK_COMPLETED",
       sessionId: start.sessionId,
       chunkId: start.chunks[0]!.id,
       translations: [
-        { id: start.chunks[0]!.segments[0]!.id, text: "第一段。" },
-        { id: start.chunks[0]!.segments[1]!.id, text: "第二段。" },
-        { id: start.chunks[0]!.segments[2]!.id, text: "第三段。" },
+        { id: start.chunks[0]!.segments[0]!.id, text: "第一段。\n\n第二段。\n\n第三段。" },
       ],
     });
     const slot = root.querySelector(".lingo-frame-translation-slot")!;
     port.emit({ type: "TRANSLATION_SESSION_COMPLETED", sessionId: start.sessionId });
     await running;
 
-    expect(slot.textContent).toBe("第一段。\n\n第二段。\n\n第三段。");
+    expect(slot.textContent).toBe("第一段。第二段。第三段。");
+    expect(slot.querySelectorAll("br")).toHaveLength(4);
     expect(root.getAttribute("data-lingo-frame-translated")).toBe("true");
   });
 
   it("flushes a subminimum prefix before crossing the soft maximum", async () => {
-    const root = document.createElement("pre");
-    root.textContent = softMaximum;
+    const root = document.createElement("article");
+    for (const text of softMaximum.trim().split("\n\n")) {
+      const paragraph = document.createElement("p");
+      paragraph.textContent = text;
+      root.append(paragraph);
+    }
     document.body.appendChild(root);
     const session = new RegionTranslationSession(scanRegion(root));
 
@@ -171,8 +177,12 @@ describe("RegionTranslationSession", () => {
   });
 
   it("isolates a Segment that exceeds the hard maximum", async () => {
-    const root = document.createElement("pre");
-    root.textContent = oversizedSegment;
+    const root = document.createElement("article");
+    for (const text of oversizedSegment.trim().split("\n\n")) {
+      const paragraph = document.createElement("p");
+      paragraph.textContent = text;
+      root.append(paragraph);
+    }
     document.body.appendChild(root);
     const session = new RegionTranslationSession(scanRegion(root));
 
