@@ -23,14 +23,12 @@ test("compares plain text and Markdown on formatted prose and ambiguous links", 
     <table><tr><td><code>cache_hit</code> counts successful lookups, not stored entries.</td></tr></table>
   </article>`;
   const ids = new Map<HTMLElement, string>();
-  const sources = scanRegion(document.querySelector("article")!).flatMap((unit) =>
-    serializeTranslationUnit(unit, ids).map((part, index) => ({
-      ...part,
-      id: `${unit.id}:segment-${index}`,
-      unitId: unit.id,
-      role: unit.role,
-    })),
-  );
+  const sources = scanRegion(document.querySelector("article")!).map((unit) => ({
+    ...serializeTranslationUnit(unit, ids),
+    id: `${unit.id}:segment-0`,
+    unitId: unit.id,
+    role: unit.role,
+  }));
   const originalFetch = globalThis.fetch.bind(globalThis);
   const usage: unknown[] = [];
   const capture = vi.spyOn(globalThis, "fetch").mockImplementation(async (url, init) => {

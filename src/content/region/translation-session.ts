@@ -30,7 +30,6 @@ const UTF8_BYTES_PER_ESTIMATED_TOKEN = 3;
 
 interface TaskSegment {
   id: string;
-  separatorBefore: string;
   translatedText: string | null;
   links: Map<string, string>;
 }
@@ -65,69 +64,66 @@ export class RegionTranslationSession {
     const textEncoder = new TextEncoder();
     const linkIds = new Map<HTMLElement, string>();
     for (const task of this.tasks) {
-      const parts = serializeTranslationUnit(task.unit, linkIds);
-      let segmentIndex = 0;
-      for (const part of parts) {
-        const text = part.markdown;
-        if (!text) {
-          continue;
-        }
-
-        const prefersBreakBefore =
-          segmentIndex > 0 || (segmentIndex === 0 && task.unit.startsChunk);
-        const estimatedTokens = Math.max(
-          1,
-          Math.ceil(textEncoder.encode(text).byteLength / UTF8_BYTES_PER_ESTIMATED_TOKEN),
-        );
-        const isFirstChunk = chunks.length === 0;
-        const minimumTokens = isFirstChunk
-          ? FIRST_CHUNK_MIN_ESTIMATED_TOKENS
-          : NEXT_CHUNK_MIN_ESTIMATED_TOKENS;
-        const targetTokens = isFirstChunk
-          ? FIRST_CHUNK_TARGET_ESTIMATED_TOKENS
-          : NEXT_CHUNK_TARGET_ESTIMATED_TOKENS;
-        const maximumTokens = isFirstChunk
-          ? FIRST_CHUNK_MAX_ESTIMATED_TOKENS
-          : NEXT_CHUNK_MAX_ESTIMATED_TOKENS;
-        const hasCurrentSegments = currentSegments.length > 0;
-        const reachedPreferredBoundary =
-          prefersBreakBefore && currentEstimatedTokens >= minimumTokens;
-        const reachedTarget = currentEstimatedTokens >= targetTokens;
-        const wouldExceedSoftMaximum = currentEstimatedTokens + estimatedTokens > maximumTokens;
-        const wouldExceedHardMaximum =
-          currentEstimatedTokens + estimatedTokens > HARD_MAX_ESTIMATED_TOKENS;
-        const reachedSegmentLimit = currentSegments.length >= MAX_SEGMENTS_PER_CHUNK;
-        if (
-          hasCurrentSegments &&
-          (reachedPreferredBoundary ||
-            reachedTarget ||
-            wouldExceedSoftMaximum ||
-            wouldExceedHardMaximum ||
-            reachedSegmentLimit)
-        ) {
-          chunks.push({ id: `chunk-${chunks.length}`, segments: currentSegments });
-          currentSegments = [];
-          currentEstimatedTokens = 0;
-        }
-
-        const id = `${task.unit.id}:segment-${segmentIndex}`;
-        const segment: TranslationSegment = {
-          id,
-          unitId: task.unit.id,
-          role: task.unit.role,
-          text,
-        };
-        task.segments.push({
-          id,
-          separatorBefore: part.separatorBefore,
-          links: part.links,
-          translatedText: null,
-        });
-        this.tasksBySegmentId.set(id, task);
-        currentSegments.push(segment);
-        currentEstimatedTokens += estimatedTokens;
-        segmentIndex += 1;
+      const part = serializeTranslationUnit(task.unit, linkIds);
+      const text = part.markdown;
+      if (!text) {
+        continue;
       }
+
+      const prefersBreakBefore = task.unit.startsChunk;
+      const estimatedTokens = Math.max(
+        1,
+        Math.ceil(textEncoder.encode(text).byteLength / UTF8_BYTES_PER_ESTIMATED_TOKEN),
+      );
+      const isFirstChunk = chunks.length === 0;
+      const minimumTokens = isFirstChunk
+        ? FIRST_CHUNK_MIN_ESTIMATED_TOKENS
+        : NEXT_CHUNK_MIN_ESTIMATED_TOKENS;
+      const targetTokens = isFirstChunk
+        ? FIRST_CHUNK_TARGET_ESTIMATED_TOKENS
+        : NEXT_CHUNK_TARGET_ESTIMATED_TOKENS;
+      const maximumTokens = isFirstChunk
+        ? FIRST_CHUNK_MAX_ESTIMATED_TOKENS
+        : NEXT_CHUNK_MAX_ESTIMATED_TOKENS;
+      const hasCurrentSegments = currentSegments.length > 0;
+      const reachedPreferredBoundary =
+        prefersBreakBefore && currentEstimatedTokens >= minimumTokens;
+      const reachedTarget = currentEstimatedTokens >= targetTokens;
+      const wouldExceedSoftMaximum = currentEstimatedTokens + estimatedTokens > maximumTokens;
+      const wouldExceedHardMaximum =
+        currentEstimatedTokens + estimatedTokens > HARD_MAX_ESTIMATED_TOKENS;
+      const reachedSegmentLimit = currentSegments.length >= MAX_SEGMENTS_PER_CHUNK;
+      if (
+        hasCurrentSegments &&
+        (reachedPreferredBoundary ||
+          reachedTarget ||
+          wouldExceedSoftMaximum ||
+          wouldExceedHardMaximum ||
+          reachedSegmentLimit)
+      ) {
+        chunks.push({
+          id: `chunk-${chunks.length}`,
+          segments: currentSegments,
+        });
+        currentSegments = [];
+        currentEstimatedTokens = 0;
+      }
+
+      const id = `${task.unit.id}:segment-0`;
+      const segment: TranslationSegment = {
+        id,
+        unitId: task.unit.id,
+        role: task.unit.role,
+        text,
+      };
+      task.segments.push({
+        id,
+        links: part.links,
+        translatedText: null,
+      });
+      this.tasksBySegmentId.set(id, task);
+      currentSegments.push(segment);
+      currentEstimatedTokens += estimatedTokens;
     }
     if (currentSegments.length > 0) {
       chunks.push({ id: `chunk-${chunks.length}`, segments: currentSegments });
@@ -244,7 +240,6 @@ export class RegionTranslationSession {
     if (translatedSegments.length > 0) {
       task.slot.classList.add("lingo-frame-bilingual-content");
       for (const segment of translatedSegments) {
-        task.slot.append(document.createTextNode(segment.separatorBefore));
         task.slot.append(
           renderTranslationMarkdown(
             segment.translatedText!,

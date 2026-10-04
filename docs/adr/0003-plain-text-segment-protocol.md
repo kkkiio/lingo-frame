@@ -1,162 +1,108 @@
-# 纯文本 Segment 协议与固定分隔符
+# Translation Unit 合批与固定分隔符
 
 * Status: accepted
 * Date: 2026-10-01
-* 修订关系：修订 [ADR-0001](./0001-llm-session-prefix-cache.md) 的「消息结构」一节，input、assistant 回填和期望回复统一为纯文本。
+* Updated: 2026-10-05
+* 修订关系：修订 [ADR-0001](./0001-llm-session-prefix-cache.md) 的消息结构和 Unit 内部分段，以及 [ADR-0002](./0002-translation-chunk-sizing.md) 的候选切分边界。不增加新的 ADR。
 
 ## Context and Problem Statement
 
-原协议把每个 user turn 组织成 JSON 对象，并要求 Provider 返回等长的字符串数组，同时开启 `response_format: {"type":"json_object"}`：
+原协议发送带 `role` 的 JSON 对象，并要求 Provider 返回等长字符串数组。真实 DeepSeek 响应曾返回条数和顺序正确的 `{role,text}` 对象，导致形状校验失败。因此协议已改为纯文本加固定分隔符，不依赖 JSON mode。
 
-```json
-{
-  "segments": [
-    { "role": "heading", "text": "A section title" },
-    { "role": "paragraph", "text": "A paragraph." }
-  ]
-}
-```
+随后一个包含单换行的完整翻译项又暴露了边界问题：请求只带一个 `<<<LFSEG>>>`，模型却在两个自然段的译文前各放一个标记。译文内容完整，`finish_reason` 为 `stop`，但本地切出两项，报 `invalidResponse`。
 
-真实观测（DeepSeek `deepseek-v4-flash`，同一 Region 的两个 Chunk）暴露了这个契约的脆弱点：第一个 Chunk 返回字符串数组，成功；第二个 Chunk 返回了 9 个 `{"role":"caption","text":"..."}` 形式的对象，**条数与顺序都正确，只有元素形状错误**。校验按字符串数组执行，因此抛错并把整个 Translation Session 判为「译文不完整或无法读取」，其后所有未完成的 Segment 都显示同一失败原因。
-
-根因不是提示词措辞。Segment ID 只存在于 content/background 的本地协议，Provider transport 只发送文本，provider 也一直按数组位置绑定译文，因此**对齐自始至终由位置决定，JSON 信封没有提供任何锚定能力**。信封只是额外带来了转义、键名和一层可被模仿的形状：输入带着 `role` 字段，模型就复刻了 `role`。
-
-问题因此是：如何让模型需要复刻的结构尽可能小，同时不依赖某个 Provider 对 JSON mode 的支持？
+Translation Unit 已决定原文范围、译文插槽和状态。Unit 内再按空行拆 Segment 并不是页面回填的必要条件，反而让请求边界与页面展示边界不一致。问题是如何保持完整 Unit，继续合批，并让模型复制明确的输出边界。
 
 ## Decision Drivers
 
-* 模型只应被要求复刻最小、无状态的结构，不需要计数或编号；
-* 输入与输出形状对称，避免「看一种形状、要另一种形状」；
-* 段内换行与空行属于译文内容，不能被协议当成边界；
-* 失败必须响亮：宁可整批报错，也不能静默错配；
-* 不依赖 `response_format`，兼容不支持 `json_object` 的 OpenAI-compatible 后端；
-* DOM、插槽、内部 Segment ID 与 API Key 继续不进入 LLM messages。
+* 一个 Translation Unit 对应一份译文和一个 Translation Slot；
+* Unit 内部换行、空行及跨行格式属于内容，不作为请求项边界；
+* 多个 Unit 合批，避免一段文字对应一次网络请求；
+* 单项与多项使用同一个提示和协议，不要求模型判断模式；
+* 输入、输出及 assistant 回填形状一致；
+* 数量错误必须失败，不能通过合并或截断译文掩盖错配；
+* 页面 DOM、插槽、属性、内部 ID 和 API Key 不进入模型消息。
 
 ## Considered Options
 
-* input、assistant 回填与期望回复统一为纯文本，Segment 之间用固定字面量分隔符
-* 保持 JSON，只放宽校验
-* 保持 JSON，只收紧提示词
-* 编号锚点，例如 `[[1]]`
-* 一行一个 Segment
-* 让 Provider 返回 HTML
+* 完整 Unit 合批，统一使用 `[[TRANSLATE]]`
+* 单项不带 marker，多项带 marker
+* Unit 内按每个换行或空行拆 Segment
+* 保持 JSON 信封，放宽返回形状
+* 编号锚点
 
 ## Decision Outcome
 
-Chosen option: "统一为纯文本加固定字面量分隔符"，因为它把模型需要复刻的结构压缩为一个无状态字面量，同时保持按位置对齐，不引入计数或编号。
+选择「完整 Unit 合批，统一使用 `[[TRANSLATE]]`」。
 
-- 移除 `response_format`，system message 不再要求 JSON 输出；
-- user turn 不再携带 JSON 信封，也不再发送 `role`；
-- 分隔符是无状态字面量，模型只负责原样复制；
-- 保留：Chat Completions 的外层响应结构、按位置绑定 Segment ID、译文数量与空译文校验、每请求 45 秒超时、追加式多轮 transcript。
+* 一个 Unit 只序列化为一个 Translation Segment。Segment 保留为内部消息类型，与 Unit 一对一，不再按文本换行或空行继续切分。
+* Chunk builder 按 Unit 累计文本量，沿用 ADR-0002 的尺寸窗口、16 项上限和超长原子项策略；Unit 内部空行不再产生候选 Chunk 边界。scanner 已识别的 DOM 边界、标题和章节起点继续有效。
+* 每个请求项之前都写 `[[TRANSLATE]]`，包括只有一个 Unit 的请求。输出与成功后的 assistant 回填使用相同格式。
+* 系统提示明确：一个 Unit 可以有多行或多个自然段；内部换行和空行不能新增 marker。
+* 不使用 `response_format`，不发送 `role` 或内部 ID；按返回顺序绑定本地 ID。
+* 本次保留受限 inline Markdown 和 `lf-link:N` 映射。受限 HTML 尚未完成对照验证，不属于本次格式变更。
 
 ### 消息结构
 
 ```text
-system message
-  目标语言、术语与语气一致、inline Markdown 与 lf-link 引用保留、原文只作为数据
-  说明：最新 user message 以分隔符开头并在每个 Segment 前重复，回复必须原样复制该分隔符
-
 user turn
-  <<<LFSEG>>>
-  Engram extends standard token embeddings ...
-  <<<LFSEG>>>
-  **With Engram model architecture optimization, ...** [This ...](lf-link:1)
-  <<<LFSEG>>>
-  Our DeepSeek-V4.1-Flash configuration uses ...
+  [[TRANSLATE]]
+  First paragraph of the same Unit.
+  Second paragraph of the same Unit.
+  [[TRANSLATE]]
+  Read **the guide** and run `pnpm test`.
 
 assistant turn
-  <<<LFSEG>>>
-  Engram 通过学习到的多 token 查找扩展了标准 token 嵌入……
-  <<<LFSEG>>>
-  **通过 Engram 模型架构优化……**
-  <<<LFSEG>>>
-  我们的 DeepSeek-V4.1-Flash 配置……
+  [[TRANSLATE]]
+  同一个 Unit 的第一段。
+  同一个 Unit 的第二段。
+  [[TRANSLATE]]
+  阅读**指南**并运行 `pnpm test`。
 ```
 
-分隔符出现在每个 Segment 之前，因此 N 个 Segment 对应 N 个分隔符，请求与回复形状对称。system message 直接写出 `<<<LFSEG>>>`，user message 再逐段重复一次，模型不需要推断、不需要计数。译文内部的换行与空行是合法内容。
+单项请求也使用同样的前置 marker，无需提示词分支。系统消息只构建一次，可以在同一 Session 的不同批次中稳定复用；历史回复由本地按成功解析的译文重新编码。
 
-### 分隔符与碰撞
+### 解析、碰撞与失败
 
-分隔符取值需要同时避开内容与模型自身的特殊标记：
+沿用按固定字面量切分、逐项 trim、丢弃空片段、检查数量等于请求项数的规则。单项回复若省略 marker，非空正文仍可解析为一项；这是既有解析容错，不是另一种请求模式。单项或多项回复出现额外非空项仍报 `invalidResponse`。
 
-- `<|...|>` 形状属于 DeepSeek 的特殊 token 家族，不能用；
-- `---` 与 Markdown 分隔线冲突，`###` 与标题冲突，`%%` 会出现在讨论格式化的行内代码里；
-- 采用 `<<<LFSEG>>>`，写成单一常量。
+数量检查不能证明内容完整或顺序正确，也不能保证 marker 次数严格正确。模型可能改变换行、漏译或换序，需用 live eval 样本检查，不能把成功解析当成完全遵守协议。
 
-分隔符是全局常量，由 system message 逐字写出，不按请求切换。备选方案是在发送前检查 Chunk 文本、命中就换成候选表中的另一个分隔符，但 system message 在一次 Translation Session 内只构建一次，早于任何 Chunk 到达，写死的字面量会与按请求选出的字面量互相矛盾。因此这里选择固定常量，并接受它的代价：Segment 文本中的行内代码若恰好包含该字面量，会原样发送；模型若照抄，回复会多切出一段，数量校验失败并让该 Chunk 报 `invalidResponse`。这是响亮失败，不会静默错配，而且要求原文出现 `<<<LFSEG>>>` 本身极罕见。
+`[[TRANSLATE]]` 是固定常量，避免裸词在自然语言中出现时误切，也避免 `<|...|>` 等模型特殊 token 外观。没有基于内容动态切换分隔符。原文若包含该字面量，模型复制后仍可能导致切分数量错误；本次接受这项限制，不静默合并译文。
 
-若将来确实要同时保留碰撞保护与逐字写出的分隔符，需要把全部 Chunk 提前交给 Provider transport，在第一个请求之前选定分隔符并固定到整个 Session；那属于会话级决策，要作为新的 ADR 提出。
+形状失败不自动重试。失败后保留前面已完成的 Unit，停止后续请求，在未完成 Slot 显示错误；取消、45 秒请求超时和追加式 transcript 规则继续沿用 ADR-0001。
 
-### 解析与失败处理
+### 展示与超长 Unit
 
-回复按分隔符字面量切分（子串切分，不按行），逐段 trim，丢弃空片段，然后断言剩余段数等于输入的 Segment 数。丢弃空片段让回复对开头、结尾或连续的分隔符保持宽容，而不会造成错配：每次切分都保持顺序，空译文本来就无效，数量不符仍然会失败。形状不符时按 Provider 失败上报 `invalidResponse`，由页面显示既有失败文案。
+完整译文写入该 Unit 已有的 Slot，行内格式和换行由受限 Markdown 渲染器构造，链接只从本地映射恢复。Unit 内不再依赖多个 Segment 的 `separatorBefore` 重新拼接。
 
-需要说明协议本身的边界：只有一个 Segment 的 Chunk 没有可用于校验的结构，任何非空回复都会被当作该 Segment 的译文。多 Segment 的 Chunk 才有结构可校验，旧的对象数组或 JSON 信封会因数量不符被拒绝。
-
-协议形状失败不自动重试，与 [ADR-0001](./0001-llm-session-prefix-cache.md) 的「不跳过、不自动重试」保持一致。若后续要引入仅针对协议形状失败的一次重试，必须同时修订该决策，而不是在 transport 层静默新增行为。
+超长 Unit 整体发送，即使超过软上限或跨项硬上限；译文全部返回后才显示该 Unit。失去同一 Unit 内部分完成的展示能力，是保持翻译边界与页面边界一致的明确代价。多个 Unit 仍按 Chunk 渐进显示。
 
 ### Consequences
 
-* Good, because 模型需要复刻的结构收敛为一个字面量，`role` 等可被模仿的字段不再进入请求；
-* Good, because 不再有 JSON 转义，段内换行按原文保真，输入与输出形状对称；
-* Good, because 不依赖 `json_object`，对不支持该参数的 OpenAI-compatible 后端更兼容；
-* Good, because 失败模式收敛为「分隔符数量不等」，响亮、可诊断，不再出现「条数正确但形状错误」这类只能整批丢弃的结果；
-* Bad, because 失去 JSON mode 的结构保证，回复可能夹带前言或漏抄分隔符；
-* Bad, because 顺序不再可校验，模型若调换两段译文无法被识别；
-* Neutral, because 外层仍是 Chat Completions 的 `choices[0].message.content`，响应解析与错误映射不变。
+* Good, because Unit、翻译项和 Slot 一对一，边界易于理解与排查；
+* Good, because 单项和多项协议一致，模型只需复制固定 marker；
+* Good, because 句子和跨行格式不会因源码换行被切开；
+* Good, because 合批继续降低请求与历史前缀的重复开销；
+* Bad, because marker 数量与翻译完整性仍依赖模型遵守指令；
+* Bad, because 超长 Unit 不能在内部拆批或渐进展示；
+* Bad, because 没有编号，模型调换两份译文时数量检查无法发现；
+* Neutral, because Markdown、链接白名单和可信凭据边界继续保留。
 
-### Confirmation
+## Confirmation
 
-* 单元测试覆盖：按分隔符切分与空片段丢弃、段数与输入不符、单 Segment Chunk 的宽容、多 Segment Chunk 拒绝 JSON 信封、原文含分隔符时原样发送并因数量不符失败；
-* e2e 的假 Provider 按新协议解析请求并作答，改动后运行 `pnpm e2e`，因为 Provider 协议同时属于 content/background 的边界；
-* e2e 用从 [SemiAnalysis 的 Engram 文章](https://newsletter.semianalysis.com/p/engrams-embedding-entendre-codesign) 抓取的片段作为真实素材：长段落、`figcaption` 图注、密集外链和 H1 小节，验证分片、图注渲染与 `lf-link:N` 还原；
-* 可选 `pnpm test:live`：同一模型、同一提示、同一分段，对照 JSON 协议与分隔符协议的解析失败率、耗时和 token 用量，产物写入 `test-results/`。
+* 单元测试：单项和多项编码、段内换行和空行、过多/过少输出、固定 marker 碰撞、历史 assistant 回填，以及一个 Unit 只产生一项和一个 Slot。
+* Chromium E2E：真实扩展发送新 marker；一个含空行的 Unit 作为一项请求并回填一个 Slot；格式、链接、章节合批、失败和取消行为继续验证。
+* `pnpm test:live`：通过生产 provider 对用户报告的 food-culture 原文执行单项和三 Unit 合批请求。同一个多行 Unit 不拆开，验证译文数量、内容锚点、顺序及段落覆盖。无凭据请求和完整响应写入 `test-results/unit-protocol-live.json`，marker 和精确换行偏差留作审阅；不做自动重试。
 
-## Pros and Cons of the Options
+## Evidence and Limits
 
-### 纯文本加固定字面量分隔符
+对原文进行过 3 个 marker × 2 种分段方式的小规模 DeepSeek 实验，每组一次，提示词保持一致。两段合为一项时，`<<<LFSEG>>>` 和 `[[SEG]]` 都多插一个 marker，`[[TRANSLATE]]` 返回一项；拆成两项时三个 marker 都正确返回两项。总计 3,253 tokens。
 
-选中的方案。
+这支持把 `[[TRANSLATE]]` 作为候选，但每组一次不能证明长期可靠性，也不能证明按所有换行切分更好。后续新提示的 live eval 曾遇到单项回复省略 marker、单换行扩展为空行；原文内容仍完整。解析保留既有数量容错，原始响应保留供审阅，持续评估真实失败而不是反复采样到通过。
 
-* Good, because 模型只需复制一个字面量，不需要计数或编号；
-* Good, because 输入输出形状对称，没有可被复刻的嵌套结构；
-* Good, because 子串切分对段内换行与空行完全免疫；
-* Good, because 对不支持 `json_object` 的后端同样可用；
-* Bad, because 失去 JSON mode 的结构保证；
-* Bad, because 缺少顺序校验，只能靠严格计数发现漏抄与多抄。
+## Pros and Cons of the Alternatives
 
-### 保持 JSON，只放宽校验
+单项省略 marker 能去掉该类计数错误，但需要两种提示和解析模式；本次选择统一协议。按换行拆项可以对齐这条案例的自然段，却会让源码排版切断句子；按空行拆项仍让 Unit 与请求项一对多，本次均不采用。
 
-接受字符串或 `{text}` 对象能把这次的事故变成成功。
-
-* Good, because 改动最小，形状偏离不再导致整批失败；
-* Bad, because 形状模仿面和转义开销都还在，下一次偏离仍要以同样方式兜底；
-* Bad, because 继续把正确性建立在模型遵守结构之上。
-
-### 保持 JSON，只收紧提示词
-
-* Good, because 不改变协议；
-* Bad, because 一个未加说明的 `role` 字段已经足以让模型改变整批输出的形状，说明该方案不够可靠。
-
-### 编号锚点
-
-* Good, because 可以对乱序、漏项、重复做精确校验；
-* Bad, because 有状态：模型必须自己计数并保证编号不漂移，而编号对它没有语义；
-* Bad, because 写错编号与形状错误同样是整批失败，宽容解析编号则等同于没有锚点。
-
-### 一行一个 Segment
-
-* Good, because 解析最简单；
-* Bad, because 单个 `\n` 属于 Segment 内容并被渲染为 `<br>`，行切分会把段内换行当成段边界；
-* Bad, because 行数不符时整批失败，而两处增删换行相互抵消时会静默错配，比形状错误更难发现。
-
-### 让 Provider 返回 HTML
-
-* Bad, because 把 DOM 完整性和安全性委托给模型输出，与 [ADR-0001](./0001-llm-session-prefix-cache.md) 的结论冲突。
-
-## More Information
-
-观测证据来自一次真实抓包：同一 Region 的两个请求都返回 HTTP 200，`finish_reason` 为 `stop`，第二个请求的 `translations` 条数与输入一致，只有元素从字符串变成了 `{role,text}` 对象。因此该事故不能用截断、网络或 Provider 错误解释，只能归因于协议形状。
-
-如果将来需要更强的顺序保证，可以在保持纯文本的前提下增加一个可由本地校验的顺序信号，而不必回到 JSON 信封；任何此类改动都应作为新的 ADR 提出。
+JSON 信封增加转义与可被模仿的返回形状，不提供顺序锚定。编号可检查顺序和重复，但需要模型保持编号正确，本次不引入。受限 HTML 可作为后续格式实验；任意模型生成 HTML 直接插入页面仍不允许。

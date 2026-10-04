@@ -15,14 +15,12 @@ test("translates inline commands with DeepSeek across two turns", async () => {
   settings.providers.deepseek.apiKey = apiKey;
   document.body.innerHTML = article;
   const linkIds = new Map<HTMLElement, string>();
-  const segments = scanRegion(document.querySelector("#selected")!).flatMap((unit) =>
-    serializeTranslationUnit(unit, linkIds).map((part, index) => ({
-      id: `${unit.id}:segment-${index}`,
-      unitId: unit.id,
-      role: unit.role,
-      text: part.markdown,
-    })),
-  );
+  const segments = scanRegion(document.querySelector("#selected")!).map((unit) => ({
+    id: `${unit.id}:segment-0`,
+    unitId: unit.id,
+    role: unit.role,
+    text: serializeTranslationUnit(unit, linkIds).markdown,
+  }));
   const requests: unknown[] = [];
   const fetch = globalThis.fetch.bind(globalThis);
   const capture = vi.spyOn(globalThis, "fetch").mockImplementation((url, init) => {

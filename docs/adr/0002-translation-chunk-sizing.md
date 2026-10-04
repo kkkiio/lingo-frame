@@ -2,7 +2,7 @@
 
 * Status: accepted
 * Date: 2026-09-16
-* 修订关系：修订 [ADR-0001](./0001-llm-session-prefix-cache.md) 中仅由标题和连续空行决定 Translation Chunk 的规则。
+* 修订关系：修订 [ADR-0001](./0001-llm-session-prefix-cache.md) 中仅由标题和连续空行决定 Translation Chunk 的规则。Unit 内部空行拆分后来由 [ADR-0003](./0003-plain-text-segment-protocol.md) 取消；当前每个 Segment 对应完整 Unit，下文尺寸窗口继续有效。
 
 ## Context and Problem Statement
 

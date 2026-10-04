@@ -471,13 +471,17 @@ test("preserves text-node line breaks in one translation block", async () => {
 
   const translation = region.locator(":scope > .lingo-frame-bilingual-content");
   await expect(translation).toHaveCount(1);
-  await expect(translation).toHaveText("第一段。\n\n第二段。");
+  await expect(translation).toHaveText("第一段。第二段。");
+  await expect(translation.locator("br")).toHaveCount(2);
+  expect(await translation.innerText()).toBe("第一段。\n\n第二段。");
   await expect(translation).toHaveCSS("white-space", "pre-wrap");
   expect(providerRequests).toHaveLength(requestCount + 1);
   expect(providerRequests.at(-1)?.segments).toEqual([
-    { text: "First paragraph." },
-    { text: "Second paragraph." },
+    { text: "First paragraph.\n\nSecond paragraph." },
   ]);
+  if (process.env.CAPTURE_REVIEW === "1") {
+    await page.screenshot({ path: ".amp/in/artifacts/multiline-unit.png" });
+  }
 });
 
 test("translates natural-language prose in an explicitly selected pre region", async () => {
